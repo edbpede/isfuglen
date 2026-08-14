@@ -65,17 +65,25 @@ export default defineConfig({
       rollupOptions: {
         output: {
           /**
-           * `pagedjs` and `docx` are dynamically imported and must never enter
-           * the initial workspace chunk (docs/PLAN.md §6.4). Naming them makes
-           * that visible in `dist/`, keeps the bundle-budget check honest, and
-           * gives the fallback test a stable request to block when it exercises
-           * the "Paged.js fails to load" branch of §13.2.
+           * Everything named here is dynamically imported and must never enter
+           * the initial workspace chunk (docs/PLAN.md §6.4): the paginator, the
+           * DOCX writer, the editor (mounted on first focus) and the draft
+           * schema (read only at the storage boundary).
+           *
+           * Naming them makes that visible in `dist/`, lets
+           * `scripts/check-bundle.ts` measure the budget rather than estimate
+           * it, and gives the fallback test a stable request to block when it
+           * exercises the "Paged.js fails to load" branch of §13.2.
            */
           manualChunks(id) {
             if (id.includes("node_modules/pagedjs")) return "pagedjs";
             if (id.includes("node_modules/docx") || id.includes("node_modules/jszip")) {
               return "docx";
             }
+            if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
+              return "editor";
+            }
+            if (id.includes("node_modules/zod")) return "schema";
             return undefined;
           },
         },

@@ -1,6 +1,4 @@
 import { clear, del, get, set } from "idb-keyval";
-import { migrateDoc } from "../model/migrate";
-import { draftIndexSchema } from "../model/schema";
 import type { NewsletterDoc } from "../model/types";
 
 /**
@@ -42,6 +40,16 @@ export async function isStorageAvailable(): Promise<boolean> {
   }
 }
 
+/**
+ * Zod and the migration chain are imported here rather than at module scope.
+ * They belong to the storage boundary and nowhere else, and loading them
+ * eagerly would put ~40 KB gz of validation code into the initial workspace
+ * payload for work that only happens when a draft is read or written (§6.4).
+ */
+async function validation() {
+  return import("../model/migrate");
+}
+
 async function read(key: string): Promise<LoadOutcome> {
   let raw: unknown;
   try {
@@ -50,6 +58,7 @@ async function read(key: string): Promise<LoadOutcome> {
     return { ok: false, reason: "unreadable", detail: String(error) };
   }
   if (raw === undefined) return { ok: false, reason: "missing", detail: `No value at ${key}` };
+  const { migrateDoc } = await validation();
   const result = migrateDoc(raw);
   if (!result.ok) return result;
   return result.migratedFrom !== undefined
@@ -72,6 +81,7 @@ export async function clearCurrent(): Promise<void> {
 export async function listDrafts(): Promise<DraftMeta[]> {
   try {
     const raw = await get(INDEX_KEY);
+    const { draftIndexSchema } = await import("../model/schema");
     const parsed = draftIndexSchema.safeParse(raw ?? []);
     return parsed.success ? parsed.data : [];
   } catch {

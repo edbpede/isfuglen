@@ -1,4 +1,4 @@
-import { type BackupFile, backupFileSchema } from "../model/schema";
+import type { BackupFile } from "../model/schema";
 import type { NewsletterDoc } from "../model/types";
 import { type DraftMeta, listDrafts, loadDraft, saveDraft } from "./documents";
 
@@ -63,6 +63,9 @@ export async function importBackup(text: string): Promise<ImportOutcome> {
     return { ok: false, detail: `Not valid JSON: ${String(error)}` };
   }
 
+  // Imported here, not at module scope: validation belongs to this boundary and
+  // must not sit in the initial workspace payload (§6.4).
+  const { backupFileSchema } = await import("../model/schema");
   const parsed = backupFileSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, detail: parsed.error.message };
 

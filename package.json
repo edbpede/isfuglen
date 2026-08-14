@@ -12,7 +12,8 @@
     "check": "astro check && svelte-check --tsconfig ./tsconfig.json",
     "test": "bun test",
     "test:e2e": "playwright test",
-    "format": "biome check --write . && prettier --write --ignore-unknown ."
+    "format": "biome check --write . && prettier --write --ignore-unknown .",
+    "check:bundle": "bun run scripts/build-logo-png.ts && astro build && bun run scripts/check-bundle.ts"
   },
   "dependencies": {
     "@astrojs/svelte": "9.0.1",
