@@ -75,10 +75,10 @@
    * it has loaded: a logo that grows after first layout makes Paged.js re-flow
    * mid-pagination and emit the document twice.
    *
-   * When the real mark replaces the placeholder, this changes with it — the step
-   * is listed in public/brand/README.md.
+   * Taken from the supplied `018-ishoej.svg`: `viewBox="0 0 300 100"`, a 3:1 box
+   * holding the DLF roundel and the "Ishøj Lærerkreds" wordmark.
    */
-  --logo-aspect: 300 / 84;
+  --logo-aspect: 300 / 100;
 
   /* Page geometry */
   --page-width: 210mm;

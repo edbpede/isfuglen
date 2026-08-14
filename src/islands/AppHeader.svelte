@@ -20,7 +20,7 @@
 <header
   class="app-chrome flex flex-wrap items-center gap-3 border-b border-hairline bg-white px-4 py-2"
 >
-  <img src="/brand/ishoej-kreds18.svg" alt="" width="100" height="28" class="h-7 w-auto" />
+  <img src="/brand/ishoej-kreds18.svg" alt="" width="300" height="100" class="h-7 w-auto" />
   <span class="font-serif text-base font-semibold text-brand">{t("app.title")}</span>
 
   <div class="ml-auto flex flex-wrap items-center gap-2">
