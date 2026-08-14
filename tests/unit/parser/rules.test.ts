@@ -152,7 +152,17 @@ describe("structural heuristics", () => {
   });
 
   test("a line ending in a colon in front of a list is that list's heading", () => {
-    expect(ruleOf("Punkter til drøftelse:\n- Forberedelsestid")).toBe("da.structure.listIntro");
+    expect(ruleOf("Punkter til drøftelse:\n- Forberedelsestid")).toBe("da.structure.colonHeading");
+  });
+
+  test("a colon line alone between blank lines is a heading for whatever follows", () => {
+    expect(
+      kindOf("Noget\n\nBesparelser på skoleområdet:\n\nDer spares 8,3 mio. kr.", "da", 1),
+    ).toBe("heading");
+  });
+
+  test("a colon line with nothing after it stays body text", () => {
+    expect(kindOf("Noget\n\nVi mangler stadig svar på:", "da", 1)).toBe("paragraph");
   });
 
   test("everything else is a paragraph", () => {
@@ -188,11 +198,99 @@ describe("structural heuristics", () => {
       "en.structure.shortHeading",
     );
     expect(ruleOf("Items for discussion:\n- Preparation time", "en")).toBe(
-      "en.structure.listIntro",
+      "en.structure.colonHeading",
     );
     expect(ruleOf("We talked at length about preparation time, and everyone agreed.", "en")).toBe(
       "en.structure.paragraph",
     );
+  });
+});
+
+describe("a list whose numbering the clipboard lost", () => {
+  /**
+   * Google Docs copies `1) Evaluering …` as `Evaluering …`. Without recovery the
+   * first orphan becomes a heading, which is the one reading that is certainly
+   * wrong — §11.4's short-heading heuristic firing on a list item.
+   */
+  const LOST = [
+    "Lige om lidt skal vi have vores første MED-møde hvor vi skal i gang med",
+    "",
+    "Evaluering af dagene før skoledagene begyndte",
+    "At give høringssvar til budget hvor der er kommet et rådighedskatalog.",
+    "",
+    "Og så videre.",
+  ].join("\n");
+
+  test("a lead-in ending in `med` turns the orphans that follow into list items", () => {
+    expect(ruleOf(LOST, "da", 1)).toBe("da.structure.recoveredList");
+    expect(kindOf(LOST, "da", 2)).toBe("orderedItem");
+  });
+
+  test("the lead-in itself is not swallowed into its own list", () => {
+    expect(kindOf(LOST, "da", 0)).toBe("paragraph");
+  });
+
+  test("recovery is always low confidence, however cleanly it matched", () => {
+    const lines = segment(LOST);
+    const line = lines[1];
+    if (!line) throw new Error("no line");
+    expect(classifyLine(line, { lang: "da", lines }).confidence).toBe("low");
+  });
+
+  test("a colon lead-in works too, with the items straight after it", () => {
+    const source = "Vi skal drøfte:\nForberedelsestid\nVikardækning\n\nDet var det.";
+    expect(kindOf(source, "da", 1)).toBe("orderedItem");
+    expect(kindOf(source, "da", 2)).toBe("orderedItem");
+    // The colon line keeps its own job: it is the heading of the list.
+    expect(ruleOf(source, "da", 0)).toBe("da.structure.colonHeading");
+  });
+
+  test("a marker the writer did type always wins", () => {
+    expect(ruleOf("Vi skal drøfte:\n1) Forberedelsestid\n2) Vikardækning\n\nSlut", "da", 1)).toBe(
+      "da.structure.orderedItem",
+    );
+  });
+
+  test("one orphan is not a list", () => {
+    expect(kindOf("Vi skal i gang med\n\nEvaluering af dagene\n\nSlut.", "da", 1)).not.toBe(
+      "orderedItem",
+    );
+  });
+
+  test("without a lead-in nothing is recovered", () => {
+    const source = "Noget\n\nEvaluering af dagene\nAt give høringssvar\n\nSlut.";
+    expect(kindOf(source, "da", 1)).toBe("heading");
+  });
+
+  test("a run that would chop a paragraph in half is refused", () => {
+    // The third line is prose, so the run would end mid-block. Leaving the
+    // numbering lost beats splitting someone's paragraph.
+    const source = [
+      "Vi skal i gang med",
+      "Evaluering af dagene",
+      "At give høringssvar",
+      "Evalueringen skal selvfølgelig handle om de dage, der var planlagt på skolen, og om vores faglige eftermiddag på Gildbroskolen",
+    ].join("\n");
+    expect(kindOf(source, "da", 1)).not.toBe("orderedItem");
+  });
+
+  test("wrapped prose is not a list: lower-case openings and trailing commas", () => {
+    const wrapped = "Vi har talt med\nMette og Jens om sagen,\nog de er enige i det hele.\n\nSlut.";
+    expect(kindOf(wrapped, "da", 1)).not.toBe("orderedItem");
+    expect(kindOf(wrapped, "da", 2)).not.toBe("orderedItem");
+  });
+
+  test("a line holding two sentences is a paragraph, not an item", () => {
+    const source =
+      "Vi skal i gang med\nEvaluering af dagene. Den skal handle om skolen.\nAt give høringssvar. Fristen er kort.\n\nSlut.";
+    expect(kindOf(source, "da", 1)).not.toBe("orderedItem");
+  });
+
+  test("the English pack recovers the same shape", () => {
+    const source =
+      "We need to get started with\n\nEvaluating the days\nDrafting the response\n\nEnd.";
+    expect(ruleOf(source, "en", 1)).toBe("en.structure.recoveredList");
+    expect(kindOf(source, "en", 2)).toBe("orderedItem");
   });
 });
 

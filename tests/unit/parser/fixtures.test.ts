@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { inlineToPlain } from "../../../src/lib/model/factory";
+import type { Block } from "../../../src/lib/model/types";
 import { parseNewsletter } from "../../../src/lib/parser/index";
-import { outline } from "../helpers/outline";
+import { blockOutline, outline } from "../helpers/outline";
 
 /**
  * The fixture corpus — docs/PLAN.md §20.1.
@@ -144,6 +146,56 @@ describe("da/uformelle-noter", () => {
       kind: "text",
       text: "Vi skal have en aftale, der kan holde til hverdagen.",
     });
+  });
+});
+
+describe("da/google-docs-nyhedsbrev", () => {
+  /**
+   * A real newsletter pasted out of Google Docs, numbering and all — which is to
+   * say without it: the clipboard drops the numerals of an auto-numbered list
+   * and leaves two bare lines behind. Before recovery the first of them became a
+   * heading and the second became that heading's body, which is the shape of the
+   * bug this fixture exists to keep fixed.
+   */
+  test("recovers the numbering the clipboard dropped", async () => {
+    const { doc } = await parseFixture("da/google-docs-nyhedsbrev.txt", "da");
+
+    const first = doc.sections[0]?.blocks[0];
+    expect(first?.type).toBe("list");
+    expect(first && "ordered" in first ? first.ordered : undefined).toBe(true);
+    expect(blockOutline(first as Block).items).toEqual([
+      "Evaluering af dagene før skoledagene begyndte",
+      "At give høringssvar til budget hvor der er kommet et rådighedskatalog med forslag til besparelser.",
+    ]);
+
+    // The lead-in stays where the writer put it: at the end of the greeting.
+    expect(doc.intro && inlineToPlain(doc.intro)).toContain("hvor vi skal i gang med");
+    expect(doc.sections.map((section) => section.heading?.text)).not.toContain(
+      "Evaluering af dagene før skoledagene begyndte",
+    );
+  });
+
+  test("says out loud that the recovered list was a guess", async () => {
+    const { report } = await parseFixture("da/google-docs-nyhedsbrev.txt", "da");
+    expect(report.lowConfidence).toHaveLength(1);
+    expect(report.lowConfidence[0]?.ruleId).toBe("da.structure.recoveredList");
+    expect(report.lowConfidence[0]?.preview).toContain("Evaluering af dagene");
+  });
+
+  test("a line ending in a colon opens a section, list or no list", async () => {
+    const { doc } = await parseFixture("da/google-docs-nyhedsbrev.txt", "da");
+    const headings = doc.sections.map((section) => section.heading?.text);
+    expect(headings).toContain("Besparelser på Børne- og Undervisningsområdet");
+    expect(headings).toContain("Blandt forslagene er");
+  });
+
+  test("the bulleted list the clipboard did keep is still a bulleted list", async () => {
+    const { doc } = await parseFixture("da/google-docs-nyhedsbrev.txt", "da");
+    const bullets = doc.sections
+      .flatMap((section) => section.blocks)
+      .filter((block) => block.type === "list")
+      .find((block) => !block.ordered);
+    expect(bullets?.items).toHaveLength(3);
   });
 });
 

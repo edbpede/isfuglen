@@ -926,13 +926,16 @@ Applied when no lexical rule fires, because most real notes are not labelled:
 | Second line, < 100 chars, no terminal full stop, blank line after | Subtitle |
 | Line < 60 chars, no terminal punctuation, blank line before, non-blank after | Heading |
 | Line is ALL CAPS, ≥ 3 chars, < 60 chars | Heading (and re-cased to sentence case) |
-| Line ends with `:` and the next line is a list | Heading of that list |
+| Line ends with `:`, and either a list or a blank line follows it | Heading of what comes after it |
 | ≥ 2 consecutive lines starting with the same marker | List (ordered iff the marker is numeric) |
+| A lead-in line (ends with `:`, or with `med`/`følgende`/`disse`/`herunder`/`nemlig`) followed by one unbroken block of ≥ 2 short, single-clause, capital-initial lines with no marker | Ordered list, always `low` confidence |
 | Line matches an email or URL and is short | Contact entry |
 | Line starts with `"` or `»` and ends with `"` or `«` | Quote |
 | Everything else | Paragraph |
 
 Danish quotation marks are `»…«` **and** `"…"`; both are recognised. Danish sentence case is applied when de-capitalising an ALL CAPS heading — first letter and nothing else, since Danish does not capitalise nouns.
+
+**Lists whose numbering the clipboard dropped.** Copying an auto-numbered list out of Google Docs yields the item text without the numerals, so the parser sees loose lines and the short-heading heuristic reads the first of them as a heading. The lead-in survives the copy, and the last rule in the table above reconstructs the list from it. It refuses in every case it cannot be sure of — a run of one, a run that would chop a paragraph in half, a run separated by blank lines, lines that read as prose — because leaving the numbering lost is a smaller cost than inventing structure. When it does fire it is `low` confidence by construction: `Rule.uncertain` overrides the score band, and the review strip names `structure.recoveredList` as the rule that guessed.
 
 ### 11.5 Conflict resolution
 

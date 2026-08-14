@@ -102,6 +102,12 @@ export interface Rule {
    * ambiguous classification, because it agrees with everything.
    */
   fallback?: boolean;
+  /**
+   * A rule that reconstructs structure the source threw away. It is a guess by
+   * construction, so it is always `low` confidence however cleanly it matched:
+   * the review strip is the price of guessing (§11.6).
+   */
+  uncertain?: boolean;
   test: (line: Line, ctx: ParseContext) => boolean;
   extract?: (line: Line, ctx: ParseContext) => RuleExtraction;
 }
