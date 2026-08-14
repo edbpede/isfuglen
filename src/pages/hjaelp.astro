@@ -1,0 +1,17 @@
+---
+import HelpContent from "../content/HelpContent.astro";
+import Static from "../layouts/Static.astro";
+import { createTranslator } from "../lib/i18n/index";
+
+const t = createTranslator("da");
+---
+
+<Static
+  lang="da"
+  page="help"
+  title={t("help.title")}
+  lead={t("help.lead")}
+  description="Sådan bruger du nyhedsbrevsgeneratoren: indsæt tekst, redigér, og eksportér til PDF, Word eller udklipsholderen."
+>
+  <HelpContent lang="da" />
+</Static>

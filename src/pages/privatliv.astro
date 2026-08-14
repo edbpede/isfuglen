@@ -1,0 +1,17 @@
+---
+import PrivacyContent from "../content/PrivacyContent.astro";
+import Static from "../layouts/Static.astro";
+import { createTranslator } from "../lib/i18n/index";
+
+const t = createTranslator("da");
+---
+
+<Static
+  lang="da"
+  page="privacy"
+  title={t("privacy.title")}
+  lead={t("privacy.lead")}
+  description="Hvad nyhedsbrevsgeneratoren gemmer, hvor det ligger, hvordan du sletter det, og hvad værktøjet aldrig gør."
+>
+  <PrivacyContent lang="da" />
+</Static>

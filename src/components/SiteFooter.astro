@@ -1,0 +1,21 @@
+---
+import { createTranslator } from "../lib/i18n/index";
+import { pathFor } from "../lib/i18n/routes";
+import type { Lang } from "../lib/i18n/types";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = createTranslator(lang);
+---
+
+<footer class="app-chrome border-t border-hairline bg-white px-4 py-6 text-sm text-muted">
+  <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2">
+    <span>Ishøj Lærerkreds · Kreds 18 · DLF</span>
+    <a class="text-brand-mid underline" href={pathFor(lang, "privacy")}>{t("nav.privacy")}</a>
+    <a class="text-brand-mid underline" href={pathFor(lang, "help")}>{t("nav.help")}</a>
+    <span class="ml-auto">{t("entry.privacyLine")}</span>
+  </div>
+</footer>
