@@ -63,6 +63,7 @@
     },
     {
       "includes": ["**/*.astro", "**/*.svelte"],
+      "formatter": { "enabled": false },
       "linter": {
         "rules": {
           "correctness": { "noUnusedVariables": "off", "noUnusedImports": "off" },
