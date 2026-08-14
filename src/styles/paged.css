@@ -12,19 +12,36 @@
  * required of the fallback (§24.1.7).
  */
 
+/**
+ * Pages 2 and beyond do not repeat the logo, which §12.8 asks for.
+ *
+ * Paged.js 0.4.3 places a `position: running()` element into a page margin box,
+ * but provides no working first-page exception for it: `@page :first { @top-left
+ * { content: none } }` is ignored, and hiding the box in CSS leaves the element
+ * in the flow instead. Both produce a duplicated lockup on page one, which is a
+ * worse defect than the absence of a reduced one on later pages.
+ *
+ * The footer margin box below repeats the organisation on every page, so a
+ * continuation page still identifies itself. Revisit if the paginator is ever
+ * replaced (§22 risk 1).
+ */
 @page {
   size: A4 portrait;
   margin: 18mm 20mm;
 
-  /* Pages 2 and beyond repeat a reduced lockup (§12.8). */
-  @top-left {
-    content: element(runninghead);
-    vertical-align: bottom;
-    padding-bottom: 4mm;
-  }
-
+  /**
+   * The running footer reads two custom properties the preview sets after
+   * pagination, rather than `string-set` and `counter(pages)`.
+   *
+   * `string-set` is declared on the in-flow footer, which the paged document
+   * hides — and a `display: none` element sets no string. `counter(pages)`
+   * depends on a counter Paged.js resets from a variable it writes at the very
+   * end of the flow, which does not survive the markup being moved into the
+   * preview. Both render empty or zero. The document's own footer text and its
+   * page total are things this app knows for certain, so it states them.
+   */
   @bottom-left {
-    content: string(nl-organisation);
+    content: var(--nl-footer, "");
     font-family: "Source Sans 3 Variable", system-ui, sans-serif;
     font-size: 8.5pt;
     color: #4a5262;
@@ -33,30 +50,13 @@
   }
 
   @bottom-right {
-    content: counter(page) " / " counter(pages);
+    content: counter(page) " / " var(--nl-pages, "");
     font-family: "Source Sans 3 Variable", system-ui, sans-serif;
     font-size: 8.5pt;
     color: #4a5262;
     vertical-align: top;
     padding-top: 3mm;
   }
-}
-
-/* Page 1 carries the full masthead in the flow, so the margin box stays empty. */
-@page :first {
-  @top-left {
-    content: none;
-  }
-}
-
-.nl-running-head {
-  display: flex;
-  position: running(runninghead);
-}
-
-/* The organisation line is set once and repeated by the footer margin box. */
-.nl-footer-org {
-  string-set: nl-organisation content();
 }
 
 /* The document sheds its own page padding: the page box supplies the margins. */

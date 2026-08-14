@@ -3,7 +3,7 @@
   import type { Translator } from "../lib/i18n/index";
   import { labelsFor } from "../lib/labels/index";
   import type { NewsletterDoc } from "../lib/model/types";
-  import { renderDocumentBody, renderDocumentHtml } from "../lib/render/html";
+  import { footerParts, renderDocumentBody, renderDocumentHtml } from "../lib/render/html";
   import pagedCss from "../styles/paged.css?raw";
   import PageIndicator from "./PageIndicator.svelte";
   import ZoomControl from "./ZoomControl.svelte";
@@ -116,6 +116,18 @@
       cancelled = true;
       clearTimeout(timer);
     };
+  });
+
+  /**
+   * The running footer's two variable inputs. Paged.js's own `string-set` and
+   * `counter(pages)` do not survive the paginated markup being moved into the
+   * preview, and both are facts this app already knows.
+   */
+  $effect(() => {
+    const element = sheet;
+    if (!element) return;
+    element.style.setProperty("--nl-footer", JSON.stringify(footerParts(doc).join(" \u00b7 ")));
+    element.style.setProperty("--nl-pages", JSON.stringify(String(pageCount)));
   });
 
   $effect(() => {

@@ -241,25 +241,6 @@ export function renderMastheadHtml(doc: NewsletterDoc, options: RenderOptions): 
   return `<header class="nl-masthead">${logo}${name}</header>`;
 }
 
-/**
- * The reduced lockup for pages 2 and beyond (§12.8).
- *
- * Hidden on screen and in the continuous fallback; `paged.css` promotes it to a
- * running element and places it in the page's top margin box, suppressed on the
- * first page where the full masthead is already in the flow.
- */
-export function renderRunningHeadHtml(doc: NewsletterDoc, options: RenderOptions): string {
-  const organisation = doc.meta.organisation?.trim();
-  const logo = options.logoSrc
-    ? `<img class="nl-running-logo" src="${escapeAttribute(options.logoSrc)}" alt="" />`
-    : "";
-  const name = organisation
-    ? `<span class="nl-running-org">${escapeHtml(organisation)}</span>`
-    : "";
-  if (!logo && !name) return "";
-  return `<div class="nl-running-head" aria-hidden="true">${logo}${name}</div>`;
-}
-
 export function renderDocumentBody(
   doc: NewsletterDoc,
   labels: DocumentLabels,
@@ -268,7 +249,6 @@ export function renderDocumentBody(
   const lang = doc.docLang;
   const parts: string[] = [];
 
-  parts.push(renderRunningHeadHtml(doc, options));
   parts.push(renderMastheadHtml(doc, options));
 
   const title = doc.meta.title.trim();
@@ -301,10 +281,15 @@ export function metaLineParts(doc: NewsletterDoc, lang: DocLang): string[] {
   ].filter((part) => part.length > 0);
 }
 
-export function renderFooterHtml(doc: NewsletterDoc): string {
-  const parts = [doc.meta.organisation?.trim(), doc.meta.footerNote?.trim()].filter(
+/** The organisation line, as the in-flow footer and the running one both use it. */
+export function footerParts(doc: NewsletterDoc): string[] {
+  return [doc.meta.organisation?.trim(), doc.meta.footerNote?.trim()].filter(
     (part): part is string => Boolean(part && part.length > 0),
   );
+}
+
+export function renderFooterHtml(doc: NewsletterDoc): string {
+  const parts = footerParts(doc);
   if (parts.length === 0) return "";
   return `<footer class="nl-footer"><span class="nl-footer-org">${parts.map(escapeHtml).join(" · ")}</span></footer>`;
 }

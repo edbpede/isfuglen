@@ -22,6 +22,24 @@ test("the Paged.js path paginates a multi-page document", async ({ page }) => {
   // The fallback notice must not be showing on this path.
   await expect(page.getByText("Sidedeling med sidetal er ikke tilgængelig")).toHaveCount(0);
 
+  // The running footer carries the organisation and a real page number.
+  const footer = await preview.evaluate((root) => {
+    const box = root.querySelector(
+      ".pagedjs_page .pagedjs_margin-bottom-right .pagedjs_margin-content",
+    );
+    const left = root.querySelector(
+      ".pagedjs_page .pagedjs_margin-bottom-left .pagedjs_margin-content",
+    );
+    return {
+      page: box ? getComputedStyle(box, "::after").content : "",
+      organisation: left ? getComputedStyle(left, "::after").content : "",
+    };
+  });
+  // `counter(pages)` does not survive the paginated markup being moved into the
+  // preview, so the total comes from a property the app sets itself.
+  expect(footer.page).toContain(String(count));
+  expect(footer.organisation).toContain("Ishøj Lærerkreds");
+
   // Every section appears exactly once, and in the order it was written.
   const headings = await preview.locator(".pagedjs_page .nl-h2").allInnerTexts();
   expect(new Set(headings).size).toBe(headings.length);
