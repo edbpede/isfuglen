@@ -1,0 +1,14 @@
+# Bun is the runtime, installer, script runner and test runner for this project.
+# See `.augment/rules/bun-unocss-dev-pro.md`.
+
+[install]
+# Single-package project: hoisted is Bun's default here and is what Astro's
+# Vite resolution expects. Exact versions so a lockfile refresh never drifts a
+# minor under us — the stack pins Astro 7.2 / Svelte 5 / UnoCSS 66 deliberately.
+exact = true
+
+[test]
+# Unit tests only. Playwright specs live in tests/e2e and are run by
+# `bun run test:e2e`; without this root they would be collected by `bun test`
+# and fail outside a browser context.
+root = "./tests/unit"
