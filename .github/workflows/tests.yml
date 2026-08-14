@@ -39,6 +39,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # tests/unit/export/docx.test.ts asserts the intrinsic width of the brand
+      # raster the DOCX export embeds. That file is a build artefact
+      # (`public/brand/*@300.png`, gitignored and regenerated on every build), so
+      # a clean checkout has to produce it before the unit suite can read it.
+      - name: Generate the brand raster
+        run: bun run scripts/build-logo-png.ts
+
       # `bunfig.toml` scopes `bun test` to tests/unit; the Playwright specs are
       # run below by their own runner.
       - name: Unit tests
