@@ -3,6 +3,7 @@
   import { inlineToPlain, rich } from "../lib/model/factory";
   import type { DocLang, NewsletterDoc } from "../lib/model/types";
   import { parseInline } from "../lib/parser/inline";
+  import { autosize } from "./ui/autosize.svelte";
 
   /**
    * Document metadata and, deliberately, the document-language control —
@@ -22,6 +23,8 @@
   let { doc, t, onchange, ondoclang }: Props = $props();
 
   let expanded = $state(true);
+
+  const introText = $derived(doc.intro ? inlineToPlain(doc.intro) : "");
 </script>
 
 <section
@@ -68,6 +71,28 @@
       />
     </div>
 
+    <!--
+      Title, subtitle, greeting — the three pieces of prose at the top of the
+      printed page, in the order they appear there. The greeting is also the
+      field most often rewritten after a parse, which is why it grows to fit
+      rather than showing a paragraph through a two-row letterbox.
+    -->
+    <div class="flex flex-col gap-1">
+      <label class="field-label" for="doc-intro">{t("doc.intro")}</label>
+      <textarea
+        id="doc-intro"
+        class="field-input resize-y leading-relaxed"
+        rows="5"
+        placeholder={t("doc.introPlaceholder")}
+        value={introText}
+        use:autosize={{ min: 5, max: 16, value: () => introText }}
+        oninput={(event) => {
+          const value = event.currentTarget.value;
+          doc.intro = value.length > 0 ? parseInline(value) : rich("");
+          onchange();
+        }}></textarea>
+    </div>
+
     <div class="grid gap-3 sm:grid-cols-3">
       <div class="flex flex-col gap-1">
         <label class="field-label" for="doc-date">{t("doc.date")}</label>
@@ -110,20 +135,6 @@
         placeholder={t("doc.locationPlaceholder")}
         oninput={onchange}
       />
-    </div>
-
-    <div class="flex flex-col gap-1">
-      <label class="field-label" for="doc-intro">{t("doc.intro")}</label>
-      <textarea
-        id="doc-intro"
-        class="field-input"
-        rows="2"
-        value={doc.intro ? inlineToPlain(doc.intro) : ""}
-        oninput={(event) => {
-          const value = event.currentTarget.value;
-          doc.intro = value.length > 0 ? parseInline(value) : rich("");
-          onchange();
-        }}></textarea>
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2">

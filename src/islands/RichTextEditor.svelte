@@ -46,6 +46,13 @@
   let toolbarVersion = $state(0);
   /** A large structured paste waiting for the user's choice (§11.7). */
   let pendingPaste = $state<string | null>(null);
+  /**
+   * Where the pointer went down on the static stand-in. The lazy mount is
+   * invisible only if the caret lands where the user aimed; sending it to the
+   * end of the body instead is the kind of small betrayal that makes an editor
+   * feel untrustworthy.
+   */
+  let entryPoint: { left: number; top: number } | null = null;
 
   /**
    * Static render of the unfocused state — literally the preview's inline
@@ -59,6 +66,19 @@
    * nowhere left for the two to drift apart.
    */
   const staticHtml = $derived(renderStatic(blocks));
+
+  function placeCaret(instance: Editor): void {
+    const point = entryPoint;
+    entryPoint = null;
+    if (point) {
+      const hit = instance.view.posAtCoords(point);
+      if (hit) {
+        instance.chain().focus().setTextSelection(hit.pos).run();
+        return;
+      }
+    }
+    instance.commands.focus("end");
+  }
 
   function renderStatic(source: BodyBlock[]): string {
     return source
@@ -133,7 +153,7 @@
       });
 
       editor = instance;
-      instance.commands.focus("end");
+      placeCaret(instance);
     })();
 
     return () => {
@@ -194,6 +214,9 @@
       onfocusin={() => {
         mounted = true;
       }}
+      onpointerdown={(event) => {
+        entryPoint = { left: event.clientX, top: event.clientY };
+      }}
       onclick={() => {
         mounted = true;
       }}
@@ -212,10 +235,27 @@
     margin-bottom: 0;
   }
 
+  /*
+   * The preflight reset takes the markers off every list. In the editor that
+   * would leave a list and two paragraphs looking identical, which is exactly
+   * the distinction someone repairing a parse is trying to see.
+   */
   .nl-editor :global(ul),
   .nl-editor :global(ol) {
     margin: 0 0 0.5rem;
     padding-left: 1.4rem;
+  }
+
+  .nl-editor :global(ul) {
+    list-style: disc;
+  }
+
+  .nl-editor :global(ol) {
+    list-style: decimal;
+  }
+
+  .nl-editor :global(li::marker) {
+    color: var(--c-brand);
   }
 
   .nl-editor :global(li) {

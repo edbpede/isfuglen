@@ -23,15 +23,17 @@
   let strip = $state<HTMLElement>();
 
   const uncertain = $derived(report.lowConfidence.length);
+  /**
+   * Two counts, each in its own sentence so each can be grammatical: the plural
+   * machinery selects on one `n` at a time. The agenda and action tallies used
+   * to be here too and are gone — "0 dagsorden og 0 handlinger" reads as a
+   * failure report on a newsletter that never asked for either, and neither
+   * number tells the reader to do anything.
+   */
   const summary = $derived(
-    uncertain === 0
-      ? t("review.summaryClean", { sections: report.sectionCount })
-      : t("review.summary", {
-          sections: report.sectionCount,
-          agendas: report.agendaCount,
-          actions: report.actionCount,
-          uncertain,
-        }),
+    `${t("review.found", { n: report.sectionCount })} ${
+      uncertain === 0 ? t("review.clean") : t("review.doubts", { n: uncertain })
+    }`,
   );
 
   // Focus moves here after the parse transition so keyboard and screen-reader
@@ -55,7 +57,7 @@
   <p class="flex-1">{summary}</p>
   {#if uncertain > 0}
     <button type="button" class="btn-secondary py-1 text-xs" onclick={walk}>
-      {t("review.show")}
+      {cursor === 0 ? t("review.show") : t("review.next")}
     </button>
   {/if}
   <button

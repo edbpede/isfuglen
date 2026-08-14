@@ -33,6 +33,27 @@
     });
   }
 
+  /**
+   * Focus follows the section the content ended up in, so the next repair is one
+   * keystroke away rather than a scroll and a hunt.
+   */
+  function mergeUp(id: string): void {
+    const index = store.doc.sections.findIndex((candidate) => candidate.id === id);
+    const target = store.doc.sections[index - 1]?.id;
+    if (!store.mergeSectionUp(id)) return;
+    onchange();
+    queueMicrotask(() => {
+      document
+        .querySelector<HTMLElement>(`[data-section-card][data-section-id="${target}"]`)
+        ?.focus();
+    });
+  }
+
+  function headingToText(id: string): void {
+    if (!store.headingToText(id)) return;
+    onchange();
+  }
+
   function move(id: string, delta: number): void {
     if (!store.moveSection(id, delta)) return;
     onchange();
@@ -68,6 +89,8 @@
         store.clearConfidence(blockId);
         onchange();
       }}
+      onmergeup={() => mergeUp(section.id)}
+      onheadingtotext={() => headingToText(section.id)}
       onformatpaste={(raw) => onformatpaste(section.id, raw)}
     />
   {/each}

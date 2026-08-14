@@ -50,14 +50,17 @@ export const da = {
     back: "Tilbage til startskærmen",
   },
   review: {
-    summary:
-      "Vi fandt {sections} afsnit, {agendas} dagsorden og {actions} handlinger. {uncertain} punkter er usikre.",
-    summaryClean: "Vi fandt {sections} afsnit. Intet så usikkert ud.",
+    found: { one: "Vi satte {n} afsnit op.", other: "Vi satte {n} afsnit op." },
+    doubts: { one: "Ét af dem er vi i tvivl om.", other: "{n} af dem er vi i tvivl om." },
+    clean: "Intet så usikkert ud.",
     show: "Vis",
     next: "Næste usikre punkt",
     dismiss: "Luk beskeden",
     uncertain: "Usikker",
     uncertainHint: "Vi var i tvivl om, hvordan dette afsnit skulle sættes op. Tjek det efter.",
+    recoveredListHint:
+      "Nummereringen fulgte ikke med, da teksten blev kopieret, så vi gættede på en liste.",
+    acknowledge: "Tjekket",
   },
   doc: {
     legend: "Dokument",
@@ -75,6 +78,7 @@ export const da = {
     docLang: "Dokumentsprog",
     docLangHint: "Styrer datoer og de faste overskrifter i selve nyhedsbrevet.",
     intro: "Indledning",
+    introPlaceholder: "Kære kolleger …",
     collapse: "Skjul dokumentoplysninger",
     expand: "Vis dokumentoplysninger",
   },
@@ -84,6 +88,9 @@ export const da = {
     headingPlaceholder: "Overskrift på afsnittet",
     moveUp: "Flyt afsnittet op",
     moveDown: "Flyt afsnittet ned",
+    more: "Flere handlinger",
+    mergeUp: "Slå sammen med afsnittet ovenfor",
+    headingToText: "Gør overskriften til tekst",
     remove: "Slet afsnittet",
     removeConfirm: "Slet afsnittet »{name}«?",
     add: "Tilføj afsnit",

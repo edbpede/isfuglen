@@ -131,8 +131,10 @@ The recommendation is therefore a **guided entry screen followed by a unified wo
 
 After parsing, the workspace opens with a dismissible review strip:
 
-> **Vi har fundet 6 afsnit, 1 dagsorden og 3 handlinger. Tjek de 2 punkter, vi var i tvivl om.**
-> *We found 6 sections, 1 agenda and 3 action items. Check the 2 items we were unsure about.*
+> **Vi satte 6 afsnit op. 2 af dem er vi i tvivl om.**
+> *We laid out 6 sections. We are unsure about 2 of them.*
+
+Two sentences, one count each: the plural machinery selects on a single `n`, so a single sentence carrying four counts cannot be grammatical in both languages at once (`1 punkter er usikre`, `0 dagsorden`). The agenda and action tallies are not here, because neither asks the reader to do anything and both read as a failure report on a newsletter that never wanted either. `ParseReport` still carries them; they are the parser's own accounting.
 
 Low-confidence blocks (§11.6) carry an unobtrusive marker in the editor pane — a dotted left rule plus the word **Usikker** / *Uncertain*, never colour alone. Clicking the strip's counter walks the user through them. Dismissing the strip is permanent for that draft.
 

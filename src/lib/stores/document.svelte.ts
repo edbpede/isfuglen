@@ -4,8 +4,10 @@ import {
   blocksForSectionType,
   contactEntry,
   createBlankDoc,
+  heading as headingBlock,
   section as makeSection,
   newId,
+  paragraph,
   rich,
 } from "../model/factory";
 import type {
@@ -105,6 +107,42 @@ export class DocumentStore {
     const [moved] = this.doc.sections.splice(from, 1);
     if (!moved) return false;
     this.doc.sections.splice(to, 0, moved);
+    this.touch();
+    return true;
+  }
+
+  /**
+   * The parser read a line as a heading that was never one — the shape a lost
+   * list marker leaves behind (§11.4). Puts the words back at the top of the
+   * body, where they can be selected and made into list items.
+   */
+  headingToText(id: string): boolean {
+    const section = this.doc.sections.find((candidate) => candidate.id === id);
+    const text = section?.heading?.text.trim() ?? "";
+    if (!section || text.length === 0) return false;
+    section.blocks.unshift(paragraph(text));
+    section.heading = undefined;
+    section.confidence = undefined;
+    this.touch();
+    return true;
+  }
+
+  /**
+   * The parser split where the writer did not. Everything in this section joins
+   * the one above it; a heading it still has becomes a sub-heading there, so
+   * merging two sections that both earned their headings loses neither.
+   */
+  mergeSectionUp(id: string): boolean {
+    const index = this.doc.sections.findIndex((candidate) => candidate.id === id);
+    if (index < 1) return false;
+    const section = this.doc.sections[index];
+    const target = this.doc.sections[index - 1];
+    if (!section || !target) return false;
+
+    const heading = section.heading?.text.trim() ?? "";
+    if (heading.length > 0) target.blocks.push(headingBlock(heading, 3));
+    target.blocks.push(...section.blocks);
+    this.doc.sections.splice(index, 1);
     this.touch();
     return true;
   }

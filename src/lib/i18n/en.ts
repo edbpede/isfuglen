@@ -44,14 +44,20 @@ export const en: Messages = {
     back: "Back to the start screen",
   },
   review: {
-    summary:
-      "We found {sections} sections, {agendas} agenda and {actions} action items. {uncertain} items are uncertain.",
-    summaryClean: "We found {sections} sections. Nothing looked uncertain.",
+    found: { one: "We laid out {n} section.", other: "We laid out {n} sections." },
+    doubts: {
+      one: "We are unsure about one of them.",
+      other: "We are unsure about {n} of them.",
+    },
+    clean: "Nothing looked uncertain.",
     show: "Show",
     next: "Next uncertain item",
     dismiss: "Dismiss this message",
     uncertain: "Uncertain",
     uncertainHint: "We were unsure how to lay this section out. Please check it.",
+    recoveredListHint:
+      "The numbering did not survive the copy, so we guessed that this was a list.",
+    acknowledge: "Checked",
   },
   doc: {
     legend: "Document",
@@ -69,6 +75,7 @@ export const en: Messages = {
     docLang: "Document language",
     docLangHint: "Controls dates and the fixed headings inside the newsletter itself.",
     intro: "Introduction",
+    introPlaceholder: "Dear colleagues …",
     collapse: "Hide document details",
     expand: "Show document details",
   },
@@ -78,6 +85,9 @@ export const en: Messages = {
     headingPlaceholder: "Section heading",
     moveUp: "Move section up",
     moveDown: "Move section down",
+    more: "More actions",
+    mergeUp: "Merge into the section above",
+    headingToText: "Turn the heading into text",
     remove: "Delete section",
     removeConfirm: "Delete the section “{name}”?",
     add: "Add section",
