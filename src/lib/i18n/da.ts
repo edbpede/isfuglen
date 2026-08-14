@@ -168,6 +168,11 @@ export const da = {
     signature: "Underskrift",
     signatureHint: "Én linje pr. navn.",
   },
+  paste: {
+    question: "Det ser ud til at være en hel tekst. Skal vi sætte den op som afsnit?",
+    asSections: "Formatér som afsnit",
+    keepPlain: "Indsæt som tekst",
+  },
   raw: {
     label: "Råtekst",
     hint: "Redigér teksten og tryk »Formatér igen« for at sætte nyhedsbrevet op på ny.",

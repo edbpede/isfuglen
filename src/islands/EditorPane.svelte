@@ -12,9 +12,11 @@
     t: Translator;
     onchange: () => void;
     ondoclang: (lang: DocLang) => void;
+    /** Replace one section with the result of laying a pasted text out (§11.7). */
+    onformatpaste: (sectionId: string, raw: string) => void;
   }
 
-  let { store, t, onchange, ondoclang }: Props = $props();
+  let { store, t, onchange, ondoclang, onformatpaste }: Props = $props();
 
   function replaceBody(sectionId: string, start: number, count: number, blocks: BodyBlock[]): void {
     const section = store.doc.sections.find((candidate) => candidate.id === sectionId);
@@ -66,6 +68,7 @@
         store.clearConfidence(blockId);
         onchange();
       }}
+      onformatpaste={(raw) => onformatpaste(section.id, raw)}
     />
   {/each}
 

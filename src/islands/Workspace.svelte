@@ -214,6 +214,20 @@
     status.announce(t("raw.reverted"));
   }
 
+  /**
+   * A large structured paste, laid out as sections in place of the one it was
+   * pasted into (§11.7). The document's own header is left alone: the user was
+   * adding to a newsletter, not starting a different one.
+   */
+  function formatPaste(sectionId: string, raw: string): void {
+    const index = store.doc.sections.findIndex((section) => section.id === sectionId);
+    if (index < 0) return;
+    const { doc: parsed } = parseNewsletter(raw, { lang: store.doc.docLang });
+    if (parsed.sections.length === 0) return;
+    store.doc.sections.splice(index, 1, ...parsed.sections);
+    store.touch();
+  }
+
   /** Clicking a block in the preview focuses the matching editor card (§3.5). */
   function selectBlock(blockId: string): void {
     const section = store.sectionOf(blockId);
@@ -328,7 +342,13 @@
 
             <div class="min-h-0 flex-1 overflow-auto" id="panel-edit">
               {#if editorView === "edit"}
-                <EditorPane {store} {t} onchange={() => store.touch()} ondoclang={setDocLang} />
+                <EditorPane
+                  {store}
+                  {t}
+                  onchange={() => store.touch()}
+                  ondoclang={setDocLang}
+                  onformatpaste={formatPaste}
+                />
               {:else}
                 <RawTextView doc={store.doc} {t} onapply={reparse} />
               {/if}
@@ -353,7 +373,13 @@
 
         <div class="min-h-0 flex-1 overflow-auto" id="panel-{mobilePane}" role="tabpanel">
           {#if mobilePane === "edit"}
-            <EditorPane {store} {t} onchange={() => store.touch()} ondoclang={setDocLang} />
+            <EditorPane
+              {store}
+              {t}
+              onchange={() => store.touch()}
+              ondoclang={setDocLang}
+              onformatpaste={formatPaste}
+            />
           {:else if mobilePane === "raw"}
             <RawTextView doc={store.doc} {t} onapply={reparse} />
           {:else}

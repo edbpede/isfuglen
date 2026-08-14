@@ -162,6 +162,11 @@ export const en: Messages = {
     signature: "Signature",
     signatureHint: "One line per name.",
   },
+  paste: {
+    question: "That looks like a whole text. Shall we lay it out as sections?",
+    asSections: "Format as sections",
+    keepPlain: "Insert as plain text",
+  },
   raw: {
     label: "Raw text",
     hint: "Edit the text and press “Format again” to lay the newsletter out afresh.",

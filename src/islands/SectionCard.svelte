@@ -32,6 +32,8 @@
     onheading: (value: string) => void;
     onbodychange: (start: number, count: number, blocks: BodyBlock[]) => void;
     onacknowledge: (blockId: string) => void;
+    /** Lay a large structured paste out as sections, replacing this one. */
+    onformatpaste: (raw: string) => void;
   }
 
   let {
@@ -46,6 +48,7 @@
     onheading,
     onbodychange,
     onacknowledge,
+    onformatpaste,
   }: Props = $props();
 
   type Group =
@@ -184,6 +187,7 @@
           {t}
           labelledBy={headingId}
           onchange={(blocks) => onbodychange(group.start, group.blocks.length, blocks)}
+          onformat={onformatpaste}
         />
       {:else if group.block.type === "agenda"}
         <AgendaEditor block={group.block} {t} {onchange} />

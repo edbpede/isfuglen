@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Editor } from "@tiptap/core";
-  import { sectionBodyExtensions, stripAlienStyles } from "../lib/editor/schema";
+  import type { Editor } from "@tiptap/core";
   import type { Translator } from "../lib/i18n/index";
   import type { DocLang, Inline } from "../lib/model/types";
+  import { looksStructured } from "../lib/parser/paste";
   import { type BodyBlock, blocksToTipTapDoc, tipTapDocToBlocks } from "../lib/render/tiptap";
   import EditorToolbar from "./EditorToolbar.svelte";
 
@@ -21,6 +21,11 @@
    *    identical to the preview, which keeps a fifteen-section document at one or
    *    two live ProseMirror instances and makes the first paint after a parse
    *    instant.
+   *
+   * TipTap and its schema are imported at that same moment rather than at module
+   * scope. An editor nobody has focused yet has no business costing ~90 KB gz of
+   * the initial workspace payload, and the plan's budget is not met without this
+   * (§6.4). The type-only import above compiles away entirely.
    */
   interface Props {
     blocks: BodyBlock[];
@@ -28,14 +33,18 @@
     t: Translator;
     labelledBy?: string;
     onchange: (blocks: BodyBlock[]) => void;
+    /** Lay a large structured paste out as sections, replacing this one. */
+    onformat?: (raw: string) => void;
   }
 
-  let { blocks, docLang, t, labelledBy, onchange }: Props = $props();
+  let { blocks, docLang, t, labelledBy, onchange, onformat }: Props = $props();
 
   let host = $state<HTMLElement>();
   let editor = $state<Editor | undefined>();
   let mounted = $state(false);
   let toolbarVersion = $state(0);
+  /** A large structured paste waiting for the user's choice (§11.7). */
+  let pendingPaste = $state<string | null>(null);
 
   /** Static render of the unfocused state — the same markup the preview uses. */
   const staticHtml = $derived(renderStatic(blocks));
@@ -67,44 +76,70 @@
   $effect(() => {
     if (!mounted || !host || editor) return;
 
-    const instance = new Editor({
-      element: host,
-      extensions: sectionBodyExtensions(t("section.bodyPlaceholder")),
-      content: blocksToTipTapDoc(blocks),
-      editorProps: {
-        attributes: {
-          class: "nl-editor-surface",
-          role: "textbox",
-          "aria-multiline": "true",
-          "aria-label": t("section.body"),
-          ...(labelledBy ? { "aria-labelledby": labelledBy } : {}),
-          lang: docLang,
-        },
-        transformPastedHTML: stripAlienStyles,
-        handleKeyDown: (_view, event) => {
-          // Escape leaves the editor rather than trapping the caret (§17.2).
-          if (event.key !== "Escape") return false;
-          const card = host?.closest("[data-section-card]") as HTMLElement | null;
-          card?.focus();
-          return true;
-        },
-      },
-      onUpdate: ({ editor: current }) => {
-        onchange(tipTapDocToBlocks(current.getJSON()));
-      },
-      onSelectionUpdate: () => {
-        toolbarVersion += 1;
-      },
-      onTransaction: () => {
-        toolbarVersion += 1;
-      },
-    });
+    const element = host;
+    let instance: Editor | undefined;
+    let cancelled = false;
 
-    editor = instance;
-    queueMicrotask(() => instance.commands.focus("end"));
+    void (async () => {
+      const [{ Editor: TipTapEditor }, { sectionBodyExtensions, stripAlienStyles }] =
+        await Promise.all([import("@tiptap/core"), import("../lib/editor/schema")]);
+      if (cancelled) return;
+
+      instance = new TipTapEditor({
+        element,
+        extensions: sectionBodyExtensions(t("section.bodyPlaceholder")),
+        content: blocksToTipTapDoc(blocks),
+        editorProps: {
+          attributes: {
+            class: "nl-editor-surface",
+            role: "textbox",
+            "aria-multiline": "true",
+            "aria-label": t("section.body"),
+            ...(labelledBy ? { "aria-labelledby": labelledBy } : {}),
+            lang: docLang,
+          },
+          transformPastedHTML: stripAlienStyles,
+          /**
+           * A large, structured plain-text paste into an *empty* section is the
+           * one case where the user might have meant "lay this out", so it is
+           * offered as an inline, non-modal choice. The default is plain text:
+           * they asked to paste, not to restructure (§11.7).
+           */
+          handlePaste: (view, event) => {
+            if (!onformat) return false;
+            const text = event.clipboardData?.getData("text/plain") ?? "";
+            if (text.length === 0) return false;
+            if (!view.state.doc.textContent.trim().length && looksStructured(text)) {
+              pendingPaste = text;
+            }
+            return false;
+          },
+          handleKeyDown: (_view, event) => {
+            // Escape leaves the editor rather than trapping the caret (§17.2).
+            if (event.key !== "Escape") return false;
+            const card = element.closest("[data-section-card]") as HTMLElement | null;
+            card?.focus();
+            return true;
+          },
+        },
+        onUpdate: ({ editor: current }) => {
+          onchange(tipTapDocToBlocks(current.getJSON()));
+        },
+        onSelectionUpdate: () => {
+          toolbarVersion += 1;
+        },
+        onTransaction: () => {
+          toolbarVersion += 1;
+        },
+      });
+
+      editor = instance;
+      instance.commands.focus("end");
+    })();
 
     return () => {
-      instance.destroy();
+      cancelled = true;
+      instance?.destroy();
       editor = undefined;
     };
   });
@@ -113,6 +148,34 @@
 <div class="flex flex-col gap-2">
   {#if mounted && editor}
     <EditorToolbar {t} {editor} version={toolbarVersion} />
+  {/if}
+
+  {#if pendingPaste}
+    <div
+      class="flex flex-wrap items-center gap-2 rounded-md border border-hairline bg-surface-sunken p-2 text-sm"
+    >
+      <p class="flex-1">{t("paste.question")}</p>
+      <button
+        type="button"
+        class="btn-secondary text-xs"
+        onclick={() => {
+          const raw = pendingPaste;
+          pendingPaste = null;
+          if (raw) onformat?.(raw);
+        }}
+      >
+        {t("paste.asSections")}
+      </button>
+      <button
+        type="button"
+        class="btn-ghost text-xs"
+        onclick={() => {
+          pendingPaste = null;
+        }}
+      >
+        {t("paste.keepPlain")}
+      </button>
+    </div>
   {/if}
 
   {#if mounted}
