@@ -101,6 +101,9 @@
         paginated = null;
         pageCount = 1;
         fallback = true;
+        // One line, on failure only. Without it, "why is there no page number"
+        // is unanswerable from a user's browser (§22 risk 1).
+        console.warn(`Pagination unavailable (${result.reason}): ${result.detail}`);
       }
     }, DEBOUNCE_MS);
 

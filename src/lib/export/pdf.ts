@@ -56,28 +56,114 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
   const source = document.createElement("div");
   source.innerHTML = options.html;
 
-  try {
-    const { Previewer } = await import("pagedjs");
-    const previewer = new Previewer();
+  const collected: CSSStyleSheet[] = [];
+  const previous = activeSheets;
+  let previewer: Awaited<ReturnType<typeof loadPreviewer>> | undefined;
 
+  try {
+    previewer = await loadPreviewer();
+
+    const polisher = (previewer as unknown as { polisher?: PolisherLike }).polisher;
+    if (polisher && supportsConstructableSheets()) {
+      redirectPolisherToCssom(polisher, collected);
+    }
+
+    // `preview` spreads its second argument into `polisher.add(...)`, so it has
+    // to be a list. Each entry is either a URL or a `{ name: cssText }` record;
+    // passing the text directly avoids a second network request for a
+    // stylesheet the bundle already contains.
     const flow = await withTimeout(
-      previewer.preview(source, { "nl-paged": options.css }, stage),
+      previewer.preview(source, [{ "nl-paged": options.css }], stage),
       budget,
     );
+
+    // The new sheets style the markup about to be swapped in, so the previous
+    // run's sheets are only dropped once this one has succeeded.
+    activeSheets = collected;
+    dropSheets(previous);
 
     const durationMs = performance.now() - started;
     return { ok: true, html: stage.innerHTML, pages: flow.total ?? countPages(stage), durationMs };
   } catch (error) {
+    dropSheets(collected);
     const durationMs = performance.now() - started;
     const reason: PaginationFailure = error instanceof TimeoutError ? "timeout" : "error";
     return { ok: false, reason, detail: String(error), durationMs };
   } finally {
+    // The markup has already been captured, so the live pages are only holding
+    // observers now. Detaching the stage without shutting them down first makes
+    // them fire against a detached tree on the next resize.
+    teardown(previewer);
     stage.remove();
+  }
+}
+
+async function loadPreviewer() {
+  const { Previewer } = await import("pagedjs");
+  return new Previewer();
+}
+
+function teardown(
+  previewer: { chunker?: { pages?: { destroy?: () => void }[]; stop?: () => void } } | undefined,
+): void {
+  if (!previewer?.chunker) return;
+  try {
+    previewer.chunker.stop?.();
+    for (const page of previewer.chunker.pages ?? []) page.destroy?.();
+  } catch {
+    /* Teardown is best effort; a failure here must not fail the pagination. */
   }
 }
 
 function countPages(container: HTMLElement): number {
   return container.querySelectorAll(".pagedjs_page").length;
+}
+
+/**
+ * Paged.js writes the stylesheet it has rewritten into a `<style>` element with
+ * text content. The Content Security Policy hashes the inline styles that exist
+ * at build time and permits nothing else, and no build-time hash can cover
+ * output that does not exist until the preview paginates.
+ *
+ * So the polisher is redirected through the CSSOM, which CSP does not govern.
+ * The alternative was a permissive `style-src`, which is impossible to combine
+ * with hashes — browsers ignore `'unsafe-inline'` whenever a hash is present in
+ * the same directive.
+ *
+ * Where constructable stylesheets are unavailable the original behaviour stands,
+ * and a CSP that then blocks it takes the documented fallback path (§13.2).
+ */
+interface PolisherLike {
+  insert?: (text: string) => unknown;
+}
+
+/** The sheets belonging to the most recent successful pagination. */
+let activeSheets: CSSStyleSheet[] = [];
+
+function supportsConstructableSheets(): boolean {
+  return (
+    typeof CSSStyleSheet !== "undefined" &&
+    typeof CSSStyleSheet.prototype.replaceSync === "function" &&
+    "adoptedStyleSheets" in Document.prototype
+  );
+}
+
+function redirectPolisherToCssom(polisher: PolisherLike, collected: CSSStyleSheet[]): void {
+  polisher.insert = (text: string) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(text);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    collected.push(sheet);
+    // Paged.js only ever calls `.remove()` on what this returns.
+    return document.createElement("style");
+  };
+}
+
+function dropSheets(sheets: CSSStyleSheet[]): void {
+  if (sheets.length === 0) return;
+  document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+    (sheet) => !sheets.includes(sheet),
+  );
 }
 
 class TimeoutError extends Error {}

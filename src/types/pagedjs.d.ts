@@ -10,16 +10,35 @@ declare module "pagedjs" {
     pages: unknown[];
   }
 
+  export interface PagedPage {
+    destroy?: () => void;
+    removeListeners?: () => void;
+  }
+
+  export interface PagedChunker {
+    pages?: PagedPage[];
+    stop?: () => void;
+  }
+
   export class Previewer {
     constructor(options?: Record<string, unknown>);
+
     /**
-     * `stylesheets` may be a list of URLs or a record of `{ name: cssText }`.
+     * Each rendered page installs a `ResizeObserver`. They have to be shut down
+     * before the offscreen stage is removed, or they fire on a detached tree.
+     */
+    chunker?: PagedChunker;
+    /**
+     * `stylesheets` is a list whose entries are either a URL or a
+     * `{ name: cssText }` record — the argument is spread into the polisher, so
+     * a bare record would fail as non-iterable.
+     *
      * Passing it explicitly matters: given `undefined`, Paged.js strips every
      * `<style>` and `<link>` out of the document head and adopts them.
      */
     preview(
       content: Element | DocumentFragment | string,
-      stylesheets: Record<string, string> | string[],
+      stylesheets: (string | Record<string, string>)[],
       renderTo: Element,
     ): Promise<PagedFlow>;
   }

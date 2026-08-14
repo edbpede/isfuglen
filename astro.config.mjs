@@ -33,7 +33,25 @@ export default defineConfig({
         "base-uri 'none'",
         "form-action 'none'",
       ],
+      /**
+       * Scripts stay hash-locked. Styles do not, and cannot: Paged.js injects
+       * the stylesheet it has rewritten as a `<style>` element at run time, and
+       * no build-time hash can cover output that does not exist until the
+       * preview paginates. A CSP that silently disabled pagination would be a
+       * worse outcome than a permissive `style-src`, which is not an
+       * exfiltration path here — `default-src 'self'` still governs every URL a
+       * stylesheet could reference.
+       *
+       * `'unsafe-inline'` is ignored by browsers whenever a hash is present in
+       * the same directive, which is why `build.inlineStylesheets` is set to
+       * `never` below: with no inline `<style>` in the output, Astro emits no
+       * style hashes and this actually takes effect.
+       */
+      styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
     },
+  },
+  build: {
+    inlineStylesheets: "never",
   },
   i18n: {
     defaultLocale: "da",
@@ -43,9 +61,25 @@ export default defineConfig({
   integrations: [UnoCSS({ injectReset: true }), svelte()],
   vite: {
     build: {
-      // pagedjs and docx are dynamically imported; keep them out of the
-      // initial workspace chunk (docs/PLAN.md §6.4).
       chunkSizeWarningLimit: 900,
+      rollupOptions: {
+        output: {
+          /**
+           * `pagedjs` and `docx` are dynamically imported and must never enter
+           * the initial workspace chunk (docs/PLAN.md §6.4). Naming them makes
+           * that visible in `dist/`, keeps the bundle-budget check honest, and
+           * gives the fallback test a stable request to block when it exercises
+           * the "Paged.js fails to load" branch of §13.2.
+           */
+          manualChunks(id) {
+            if (id.includes("node_modules/pagedjs")) return "pagedjs";
+            if (id.includes("node_modules/docx") || id.includes("node_modules/jszip")) {
+              return "docx";
+            }
+            return undefined;
+          },
+        },
+      },
     },
   },
 });
