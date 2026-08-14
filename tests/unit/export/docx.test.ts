@@ -78,7 +78,9 @@ describe("content mapping", () => {
 
   test("dates are formatted in the document language", async () => {
     expect((await unzip("da")).document).toContain("fredag den 14. august 2026");
-    expect((await unzip("en")).document).toContain("Friday 14 August 2026");
+    // See tests/unit/i18n/format.test.ts: the comma in the English full date is
+    // ICU's, and it has changed between releases.
+    expect((await unzip("en")).document).toMatch(/Friday,? 14 August 2026/);
   });
 
   test("info boxes are tables with shading and a coloured left border", async () => {
