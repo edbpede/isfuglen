@@ -111,12 +111,15 @@ export function assemble(input: AssembleInput): Assembly {
     switch (chunk.kind) {
       case "heading": {
         const label = headingText(chunk);
+        const stated = chunk.entries[0]?.extraction.level;
         const last = sections.at(-1);
-        if (last?.heading && last.blocks.length === 0) {
-          // Two headings back to back: the second is a sub-heading of the first.
-          push(headingBlock(label, 3), chunk);
-          container = { kind: "none" };
-          break;
+        // An explicit `###`, or two headings back to back, is a sub-heading.
+        if (stated === 3 || (last?.heading && last.blocks.length === 0)) {
+          if (sections.length > 0) {
+            push(headingBlock(label, 3), chunk);
+            container = { kind: "none" };
+            break;
+          }
         }
         openSection([], chunk, label);
         container = { kind: "none" };
@@ -159,8 +162,9 @@ export function assemble(input: AssembleInput): Assembly {
 
       case "importantHeading":
       case "infoHeading": {
-        const tone = chunk.kind === "importantHeading" ? "important" : "info";
         const entry = chunk.entries[0];
+        const tone =
+          entry?.extraction.tone ?? (chunk.kind === "importantHeading" ? "important" : "info");
         const shape = entry?.extraction.shape ?? "whole";
         const content = shape === "whole" ? [] : parseInline(entry?.extraction.rest ?? "");
         const block = notice(content, tone, sectionTitle(chunk));
@@ -232,9 +236,13 @@ export function assemble(input: AssembleInput): Assembly {
         // The rule strips the surrounding quotation marks; the template draws
         // the quote's own treatment, so keeping them would double the signal.
         const body = chunk.entries
+          .filter((entry) => entry.extraction.attribution === undefined)
           .map((entry) => entry.extraction.rest ?? entry.line.text)
           .join(" ");
-        push(quote(parseInline(body)), chunk);
+        const attribution = chunk.entries.find(
+          (entry) => entry.extraction.attribution !== undefined,
+        )?.extraction.attribution;
+        push(quote(parseInline(body), attribution), chunk);
         break;
       }
 

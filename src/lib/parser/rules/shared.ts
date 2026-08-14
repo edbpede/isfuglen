@@ -180,8 +180,60 @@ const PHONE = /(?:\+45\s*)?(?:\d{2}\s?){4}\b/;
 const OPEN_QUOTE = /^["“»„'']/;
 const CLOSE_QUOTE = /["”«''],?[.!?]?$/;
 
+/**
+ * `[VIGTIGT] …` and `[TIL ORIENTERING] …` — the shape the plain-text
+ * serialisation gives a notice (§15.4).
+ */
+const TAGGED_NOTICE = /^\[([^\]]{2,40})\]\s+(.+)$/;
+const IMPORTANT_TAGS = new Set(["vigtigt", "vigtig", "obs", "nb", "important", "note"]);
+
 export function structuralRules(lang: DocLang): Rule[] {
   return [
+    // A line the source explicitly tagged as a notice.
+    {
+      id: `${lang}.markdown.notice`,
+      lang,
+      kind: "importantHeading",
+      score: 94,
+      test: (line) => TAGGED_NOTICE.test(line.text),
+      extract: (line) => {
+        const match = TAGGED_NOTICE.exec(line.text);
+        const tag = lower((match?.[1] ?? "").trim(), lang);
+        return {
+          shape: "labelled",
+          label: (match?.[1] ?? "").trim(),
+          labelIsGeneric: true,
+          rest: (match?.[2] ?? "").trim(),
+          tone: IMPORTANT_TAGS.has(tag) ? "important" : "info",
+        };
+      },
+    },
+    // `> quoted line` and its `> — attribution` companion.
+    {
+      id: `${lang}.markdown.quote`,
+      lang,
+      kind: "quote",
+      score: 92,
+      test: (line) => /^>\s+/.test(line.text),
+      extract: (line) => {
+        const body = line.text.replace(/^>\s+/, "").trim();
+        const attribution = /^[\u2014\u2013-]\s+(.+)$/.exec(body);
+        return attribution ? { attribution: (attribution[1] ?? "").trim() } : { rest: body };
+      },
+    },
+    /**
+     * An explicit Markdown heading whose words the lexicon did not recognise.
+     * Scored below both lexical packs on purpose: `## Dagsorden` must still be
+     * an agenda heading, not a generic one.
+     */
+    {
+      id: `${lang}.markdown.heading`,
+      lang,
+      kind: "heading",
+      score: 82,
+      test: (line) => line.headingLevel !== undefined,
+      extract: (line) => ({ label: line.text, level: line.headingLevel }),
+    },
     {
       id: `${lang}.structure.orderedItem`,
       lang,

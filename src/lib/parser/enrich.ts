@@ -22,9 +22,14 @@ const DUE_PREFIX: Record<DocLang, RegExp> = {
 };
 
 const MINUTES = /\((\d{1,3})\s*(?:min|minutter|minutes)\.?\)|\b(\d{1,3})\s*min\.?\b/i;
+/**
+ * `v/` is a notation rather than a Danish word, and the plain-text
+ * serialisation writes it in both languages — so both packs read it back. That
+ * is what keeps the raw-text view lossless in an English document (§7.5).
+ */
 const PRESENTER: Record<DocLang, RegExp> = {
   da: /\b(?:v\/|ved|oplæg ved|oplægsholder)\s*:?\s*([^,;()]+)/i,
-  en: /\b(?:by|presented by|presenter)\s*:?\s*([^,;()]+)/i,
+  en: /(?:\bv\/|\b(?:by|presented by|presenter))\s*:?\s*([^,;()]+)/i,
 };
 
 const SEPARATOR = /\s+[–—]\s+|\s+-\s+/;

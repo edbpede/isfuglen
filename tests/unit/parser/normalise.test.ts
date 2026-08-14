@@ -6,8 +6,14 @@ import { segment } from "../../../src/lib/parser/segment";
 
 describe("normaliseText", () => {
   test("normalises decomposed Danish characters to NFC", () => {
-    const decomposed = "a\u030A"; // the shape macOS clipboards produce
-    expect(decomposed === "å").toBe(false);
+    // The shape macOS clipboards and several PDF extractors produce. Compared
+    // through a variable so TypeScript cannot fold the literals together and
+    // declare the comparison pointless — at runtime they are not equal, which
+    // is the entire reason this normalisation exists.
+    const decomposed: string = "a\u030A";
+    const composed: string = "\u00E5";
+    expect(decomposed === composed).toBe(false);
+    expect(decomposed.normalize("NFC") === composed).toBe(true);
     expect(normaliseText(decomposed)).toBe("å");
     expect(normaliseText("Ma\u030Ansdag")).toBe("Månsdag");
   });

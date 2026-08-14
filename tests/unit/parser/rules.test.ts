@@ -161,7 +161,24 @@ describe("structural heuristics", () => {
     );
   });
 
+  test("the raw-text serialisation reads back as the structure it came from", () => {
+    // §7.5: the raw view round trips because the parser understands its own
+    // output, not because the output is re-derived from the model.
+    expect(ruleOf("## DAGSORDEN\n1. Et punkt")).toBe("da.heading.agenda");
+    expect(ruleOf("## Et eller andet\nnoget")).toBe("da.markdown.heading");
+    expect(kindOf("### Underoverskrift\nnoget")).toBe("heading");
+    expect(ruleOf("[VIGTIGT] Frist for tilmelding")).toBe("da.markdown.notice");
+    expect(ruleOf("> Vi skal have en aftale.")).toBe("da.markdown.quote");
+  });
+
+  test("a tagged notice carries its tone", () => {
+    expect(kindOf("[TIL ORIENTERING] Kredsen holder generalforsamling")).toBe("importantHeading");
+  });
+
   test("the same heuristics exist in the English pack", () => {
+    expect(ruleOf("## Something else\nnext", "en")).toBe("en.markdown.heading");
+    expect(ruleOf("[IMPORTANT] Deadline is Friday", "en")).toBe("en.markdown.notice");
+    expect(ruleOf("> We need an agreement.", "en")).toBe("en.markdown.quote");
     expect(ruleOf("- One item", "en")).toBe("en.structure.listItem");
     expect(ruleOf("1. One item", "en")).toBe("en.structure.orderedItem");
     expect(ruleOf('"We need an agreement."', "en")).toBe("en.structure.quote");

@@ -10,6 +10,14 @@ export interface Line {
   indent: number;
   blankBefore: boolean;
   blankAfter: boolean;
+  /**
+   * Set when the line opened with a Markdown heading marker, which the marker
+   * has already been stripped from. This is what makes the raw-text view round
+   * trip: the serialisation writes `## DAGSORDEN`, and the lexicon then sees
+   * `DAGSORDEN` and classifies it as an agenda heading rather than as prose
+   * beginning with two hash marks (§7.5).
+   */
+  headingLevel?: 2 | 3;
 }
 
 /**
@@ -75,6 +83,11 @@ export interface RuleExtraction {
   /** True when the label is the pack's own word for this kind, so it is droppable. */
   labelIsGeneric?: boolean;
   shape?: MatchShape;
+  /** Heading depth, when the source stated one explicitly. */
+  level?: 2 | 3;
+  /** The notice tone, for the `[VIGTIGT] …` serialisation form. */
+  tone?: "info" | "important";
+  attribution?: string;
 }
 
 export interface Rule {
