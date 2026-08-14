@@ -22,9 +22,29 @@ test("the Paged.js path paginates a multi-page document", async ({ page }) => {
   // The fallback notice must not be showing on this path.
   await expect(page.getByText("Sidedeling med sidetal er ikke tilgængelig")).toHaveCount(0);
 
-  // Every section appears exactly once, in order, across the page boxes.
+  // Every section appears exactly once, and in the order it was written.
   const headings = await preview.locator(".pagedjs_page .nl-h2").allInnerTexts();
   expect(new Set(headings).size).toBe(headings.length);
+  expect(headings).toEqual(
+    [...headings].sort((a, b) => Number(a.replace(/\\D/g, "")) - Number(b.replace(/\\D/g, ""))),
+  );
+
+  // And every heading sits inside its page box rather than clipped past the
+  // bottom of it. This is the failure a paginated preview hides: the content is
+  // all present in the DOM, but a page overflows and the next one starts the
+  // document over.
+  const clipped = await preview.evaluate((root) =>
+    [...root.querySelectorAll(".pagedjs_page")].flatMap((box) => {
+      const bounds = box.getBoundingClientRect();
+      return [...box.querySelectorAll(".nl-h2")]
+        .filter((heading) => {
+          const rect = heading.getBoundingClientRect();
+          return rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1;
+        })
+        .map((heading) => heading.textContent);
+    }),
+  );
+  expect(clipped).toEqual([]);
 
   // No heading is the last rendered element on a page.
   const stranded = await preview.evaluate(
