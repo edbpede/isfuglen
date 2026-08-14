@@ -1219,7 +1219,7 @@ Three reasons, in order of weight:
 2. **Page breaks behave identically in all four browsers**, because Paged.js implements orphans, widows and break avoidance itself rather than delegating to four different layout engines.
 3. **Page numbers and running headers work** — `counter(page)`, `counter(pages)` and named page margin boxes are Paged.js's core competence.
 
-**Fallback contract.** The print stylesheet is authored to be correct on its own. If Paged.js fails to load, throws, or exceeds a 3-second budget, the preview shows a continuous (unpaginated) document with a quiet notice, and printing uses the plain stylesheet. The result is still a correct, selectable, sharp multi-page PDF — it simply loses in-content page numbers and uniform widow control. The fallback costs nothing extra because the print CSS must exist regardless.
+**Fallback contract.** The print stylesheet is authored to be correct on its own. If Paged.js fails to load, throws, or exceeds a 3-second budget, the preview shows a continuous (unpaginated) document with a quiet notice, and printing uses the plain stylesheet. The result is still a correct, selectable, sharp multi-page PDF — it simply loses in-content page numbers and uniform widow control. The fallback costs nothing extra because the print CSS must exist regardless. Because this path is mandatory rather than hypothetical, it is released against its own acceptance criterion — §24.1.7, deliberately weaker than the §24.1.6 bar that Paged.js is there to meet — and §20.2 tests it separately with Paged.js blocked.
 
 **Isolation.** Paged.js rewrites the DOM it is given. It therefore runs on a **cloned, non-editable render** of `NewsletterDoc` inside the preview pane, never on the editor. Re-pagination is debounced at 400 ms after the last edit, runs against a detached fragment, and swaps in on completion — so typing never fights the paginator.
 
@@ -1754,7 +1754,8 @@ The DOCX test is worth highlighting: unzipping the blob and asserting on the XML
 
 **Export:**
 
-- `page.emulateMedia({ media: "print" })`, then assert page count, that no `h2` is the last element on a page, that a list spans a break with continuing numbering, and that the footer shows the right page number.
+- `page.emulateMedia({ media: "print" })`, then assert page count, that no `h2` is the last element on a page, that a list spans a break with continuing numbering, and that the footer shows the right page number. This is the §24.1.6 contract and it presumes Paged.js.
+- The same flow with the lazily-imported `pagedjs` chunk aborted via `page.route()` (§6.4), exercising the "fails to load" branch of §13.2 and asserting the §24.1.7 contract instead: the fallback notice is visible and every section still appears exactly once, in order. Page-number and widow assertions are deliberately absent — a mandatory degradation path is only honest if its weaker guarantees are the ones actually tested. Break behaviour is *not* DOM-observable once Paged.js is gone, so "nothing lost across a break" is asserted from `page.pdf()` text extraction in Chromium and falls to §20.4 elsewhere.
 - DOCX: capture the download, unzip, assert structure.
 - Clipboard: `context.grantPermissions(["clipboard-read", "clipboard-write"])` (Chromium), read back both flavours, assert both.
 
@@ -1779,6 +1780,8 @@ Automated tests cannot verify what Word does with a DOCX. Once per milestone, on
 | `æøå` correct throughout | ✓ | ✓ | ✓ | ✓ |
 
 Plus a paste pass into Word, Outlook desktop, Outlook web, Gmail and Google Docs against the table in §15.3 — that table is a claim, and it must be checked rather than assumed.
+
+And one print pass per target browser — Chrome, Firefox, Safari desktop, Safari iOS — with Paged.js blocked, checking the §24.1.7 degraded bar on the saved PDF rather than in the DOM. Without Paged.js the page breaks exist only inside the browser's own print engine, so nothing but the output can answer whether content survived them.
 
 ---
 
@@ -1899,14 +1902,15 @@ Adversarial parser inputs. Long-document performance. Cross-browser matrix. Visu
 3. The engine recognises title, subtitle, date, time, location, introduction, headings, sub-headings, paragraphs, agenda, bulleted and numbered lists, decisions, important notices, action items with owner and deadline, quotes, contact details, links, email addresses, closing text and signature.
 4. Every engine decision is correctable by the user.
 5. The live A4 preview reflects edits within 500 ms.
-6. Multi-page documents paginate with correct breaks: no isolated heading at a page bottom, lists continue with correct numbering, page numbers are correct.
-7. PDF export produces a multi-page document with selectable text and a sharp logo.
-8. DOCX export opens in Word without a repair prompt, with headings, lists, links, info boxes, header, footer, logo, margins and A4 page size intact.
-9. Copy writes both `text/html` and `text/plain`; pasting into Word preserves headings, lists, links and info boxes.
-10. Drafts survive a reload and are deletable by the user.
-11. No document content leaves the browser — verified by a network-interception test.
-12. The full flow is operable by keyboard alone.
-13. `axe-core` reports no violations on any screen in either language.
+6. **On the Paged.js path**, multi-page documents paginate with correct breaks: no isolated heading at a page bottom, lists continue with correct numbering, in-content page numbers are correct.
+7. **On the print-CSS fallback path** — mandatory whenever Paged.js fails to load, throws, or exceeds its 3-second budget (§13.2) — these degraded criteria apply *instead of* criterion 6: the export still meets criterion 8, every section appears exactly once and in order with no content lost or duplicated across a break, and the preview shows the fallback notice. In-content page numbers, cross-browser-uniform widow control **and** heading/page-bottom isolation are **not** required here — §21 records `orphans`/`widows` as absent in Firefox and `break-after: avoid` as only partial there — and their absence is not a release blocker. That is the whole reason §13.1 rejects print CSS *alone* while §13.2 still requires it as a floor. Both criteria are demonstrated at release: 6 with Paged.js loaded, 7 with it blocked (§20.2).
+8. PDF export produces a multi-page document with selectable text and a sharp logo.
+9. DOCX export opens in Word without a repair prompt, with headings, lists, links, info boxes, header, footer, logo, margins and A4 page size intact.
+10. Copy writes both `text/html` and `text/plain`; pasting into Word preserves headings, lists, links and info boxes.
+11. Drafts survive a reload and are deletable by the user.
+12. No document content leaves the browser — verified by a network-interception test.
+13. The full flow is operable by keyboard alone.
+14. `axe-core` reports no violations on any screen in either language.
 
 ### 24.2 Localisation — required set
 
