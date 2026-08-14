@@ -165,15 +165,23 @@ args = ['client:only[\s/>]']
 files = '\.astro$'
 
 # UnoCSS generates only the classes it can find by scanning source, so a class
-# name assembled at runtime silently produces no CSS. Both patterns require the
-# interpolation to be glued to a class-name character, which catches the broken
-# form (`text-${c}-500`, `text-{c}-500`) while allowing the safe one, where a
-# whole literal class string is interpolated (`${base} ${extra}`).
+# name assembled at runtime silently produces no CSS. Every pattern requires the
+# interpolation to be glued to a class-name character on one side or the other,
+# which catches the broken forms (`text-${c}-500`, `${c}-500`, `text-{c}-500`,
+# `{c}-500`) while allowing the safe one, where whole literal class strings are
+# interpolated (`${base} ${extra}`). Glue on the left and glue on the right get a
+# pattern each because the Rust regex engine has no lookaround — neither side can
+# be written as a negative lookahead on the other.
 [[repos.hooks]]
 id = "deny-pattern"
 alias = "no-dynamic-classes"
 name = "No dynamically constructed UnoCSS class names"
-args = ['class=\{`[^`]*[-a-zA-Z0-9]\$\{', 'class="[^"]*[-a-zA-Z0-9]\{']
+args = [
+  'class=\{`[^`]*[-a-zA-Z0-9]\$\{',
+  'class=\{`[^`]*\$\{[^`}]*\}[-a-zA-Z0-9]',
+  'class="[^"]*[-a-zA-Z0-9]\{',
+  'class="[^"]*\{[^"}]*\}[-a-zA-Z0-9]',
+]
 files = '\.(astro|svelte)$'
 
 # ---------------------------------------------------------------------------
