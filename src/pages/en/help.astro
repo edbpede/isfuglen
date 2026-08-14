@@ -1,0 +1,17 @@
+---
+import HelpContent from "../../content/HelpContent.astro";
+import Static from "../../layouts/Static.astro";
+import { createTranslator } from "../../lib/i18n/index";
+
+const t = createTranslator("en");
+---
+
+<Static
+  lang="en"
+  page="help"
+  title={t("help.title")}
+  lead={t("help.lead")}
+  description="How to use the newsletter generator: paste text, edit, and export to PDF, Word or the clipboard."
+>
+  <HelpContent lang="en" />
+</Static>

@@ -1,0 +1,481 @@
+/**
+ * The newsletter itself — docs/PLAN.md §12.7 and §12.9.
+ *
+ * Plain CSS, not utility classes. The document's whole appearance lives in one
+ * readable file so the printed result is auditable, and so the same rules serve
+ * the on-screen preview, the print output and the Paged.js pagination.
+ *
+ * The block vocabulary is three parts — fill, bar, label — and each block type
+ * varies only which parts it uses and in what colour. That is what keeps the
+ * page rhythmic without any block looking foreign, and what makes an eleventh
+ * block type a matter of picking from the vocabulary rather than inventing one.
+ */
+
+.nl-doc {
+  box-sizing: border-box;
+  width: var(--page-width);
+  min-height: var(--page-height);
+  padding: var(--page-margin-y) var(--page-margin-x);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-family: var(--f-sans);
+  font-size: 10.5pt;
+  line-height: 1.55;
+  hyphens: auto;
+  text-align: left;
+}
+
+.nl-doc * {
+  box-sizing: border-box;
+}
+
+/* ---------- masthead ---------- */
+
+.nl-masthead {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-4);
+  min-height: var(--header-band);
+  padding-bottom: var(--mm-3);
+  border-bottom: var(--bw-brand) solid var(--c-accent);
+}
+
+.nl-logo {
+  width: 32mm;
+  aspect-ratio: var(--logo-aspect);
+  height: auto;
+  flex: none;
+}
+
+.nl-org {
+  margin-left: auto;
+  color: var(--c-brand);
+  font-size: 9.5pt;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+/* ---------- document header ---------- */
+
+.nl-title {
+  margin: var(--mm-7) 0 0;
+  color: var(--c-ink);
+  font-family: var(--f-serif);
+  font-size: 30pt;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.nl-subtitle {
+  margin: var(--mm-2) 0 0;
+  color: var(--c-muted);
+  font-size: 14pt;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.nl-meta {
+  margin: var(--mm-3) 0 0;
+  color: var(--c-muted);
+  font-size: 9.5pt;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.nl-intro {
+  margin: var(--mm-5) 0 var(--mm-5);
+  padding-top: var(--mm-5);
+  border-top: var(--bw-hairline) solid var(--c-hairline);
+}
+
+/* ---------- sections and text ---------- */
+
+.nl-section + .nl-section {
+  margin-top: var(--mm-5);
+}
+
+.nl-h2 {
+  /* Space before a heading is always larger than the space after it: that is
+     what makes a heading read as belonging to the text below. */
+  margin: var(--mm-6) 0 var(--mm-3);
+  color: var(--c-brand);
+  font-family: var(--f-serif);
+  font-size: 16pt;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.nl-h3 {
+  margin: var(--mm-5) 0 var(--mm-2);
+  color: var(--c-muted);
+  font-size: 9pt;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nl-p {
+  margin: 0 0 var(--mm-3);
+}
+
+.nl-doc a {
+  color: var(--c-brand-mid);
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.nl-ul,
+.nl-ol {
+  margin: 0 0 var(--mm-3);
+  padding-left: var(--mm-5);
+}
+
+.nl-ul li,
+.nl-ol li {
+  margin-bottom: var(--mm-2);
+  padding-left: var(--mm-1);
+}
+
+.nl-ul {
+  list-style: none;
+  padding-left: var(--mm-4);
+}
+
+.nl-ul li {
+  position: relative;
+  padding-left: var(--mm-4);
+}
+
+.nl-ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 1.4mm;
+  height: 1.4mm;
+  background: var(--c-brand);
+}
+
+.nl-ol li::marker {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+/* ---------- the shared block vocabulary ---------- */
+
+.nl-block-label {
+  margin: 0 0 var(--mm-2);
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nl-agenda,
+.nl-decisions,
+.nl-actions,
+.nl-notice-info,
+.nl-notice-important,
+.nl-contact {
+  margin: 0 0 var(--mm-4);
+  padding: var(--mm-4);
+  border-radius: var(--r-sm);
+  /* Chrome and Firefox drop background fills when printing without this. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Agenda — no fill, gold numeral chips */
+
+.nl-agenda {
+  padding: 0;
+  border-radius: 0;
+}
+
+.nl-agenda .nl-block-label {
+  color: var(--c-brand);
+}
+
+.nl-agenda-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: nl-agenda;
+}
+
+.nl-agenda-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--mm-2);
+  margin-bottom: var(--mm-2);
+  padding-left: 7mm;
+  counter-increment: nl-agenda;
+}
+
+.nl-agenda-item::before {
+  content: counter(nl-agenda);
+  position: absolute;
+  left: 0;
+  top: -0.15em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5mm;
+  height: 5mm;
+  border-radius: 50%;
+  background: var(--c-accent);
+  color: var(--c-brand);
+  font-size: 8pt;
+  font-weight: 700;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.nl-agenda-text {
+  flex: 1 1 auto;
+}
+
+.nl-agenda-presenter,
+.nl-agenda-minutes {
+  flex: none;
+  color: var(--c-muted);
+  font-size: 8.5pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Decisions — green fill, solid dark-green bar, checkmark per item */
+
+.nl-decisions {
+  background: var(--c-decision-fill);
+  border-left: var(--bw-bar) solid var(--c-decision-bar);
+}
+
+.nl-decisions .nl-block-label {
+  color: var(--c-decision-bar);
+}
+
+.nl-decision-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nl-decision-item {
+  position: relative;
+  margin-bottom: var(--mm-2);
+  padding-left: 5mm;
+}
+
+.nl-decision-item::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--c-decision-bar);
+  font-weight: 700;
+}
+
+/* Action items — red fill, solid bar, `task — owner · deadline` */
+
+.nl-actions {
+  background: var(--c-action-fill);
+  border-left: var(--bw-bar) solid var(--c-action-bar);
+}
+
+.nl-actions .nl-block-label {
+  color: var(--c-action-bar);
+}
+
+.nl-action-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nl-action-item {
+  margin-bottom: var(--mm-2);
+  padding-left: 5mm;
+  position: relative;
+}
+
+.nl-action-item::before {
+  content: "\25A0";
+  position: absolute;
+  left: 0;
+  top: -0.05em;
+  color: var(--c-action-bar);
+  font-size: 7pt;
+}
+
+.nl-action-meta {
+  display: block;
+  color: var(--c-muted);
+  font-size: 9pt;
+}
+
+.nl-action-owner {
+  font-weight: 600;
+}
+
+.nl-action-owner + .nl-action-due::before {
+  content: " · ";
+}
+
+/* Notices — warm fill with a gold bar, or blue fill with a brand-mid bar */
+
+.nl-notice-important {
+  background: var(--c-important-fill);
+  border-left: var(--bw-bar) solid var(--c-important-bar);
+}
+
+.nl-notice-important .nl-block-label {
+  color: var(--c-ink);
+}
+
+.nl-notice-info {
+  background: var(--c-info-fill);
+  border-left: var(--bw-bar) double var(--c-info-bar);
+  border-left-width: 1.4mm;
+}
+
+.nl-notice-info .nl-block-label {
+  color: var(--c-brand-mid);
+}
+
+.nl-notice-body {
+  margin: 0;
+}
+
+/* Quote — no fill, hairline rule, italic */
+
+.nl-quote {
+  margin: 0 0 var(--mm-4);
+  padding-left: var(--mm-5);
+  border-left: var(--bw-hairline) dotted var(--c-hairline);
+  border-left-width: 0.5mm;
+  font-style: italic;
+}
+
+.nl-quote p {
+  margin: 0;
+}
+
+.nl-quote-attribution {
+  margin-top: var(--mm-2);
+  color: var(--c-muted);
+  font-size: 8.5pt;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Contact — hairline above, two-column definition list */
+
+.nl-contact {
+  padding: var(--mm-4) 0 0;
+  border-top: var(--bw-hairline) solid var(--c-hairline);
+  border-radius: 0;
+}
+
+.nl-contact .nl-block-label {
+  color: var(--c-brand);
+}
+
+.nl-contact-list {
+  margin: 0;
+}
+
+.nl-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-2);
+  margin-bottom: var(--mm-2);
+}
+
+.nl-contact-name {
+  flex: 0 0 45mm;
+  font-weight: 600;
+}
+
+.nl-contact-role {
+  display: block;
+  color: var(--c-muted);
+  font-size: 9pt;
+  font-weight: 400;
+}
+
+.nl-contact-detail {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+/* Closing */
+
+.nl-closing {
+  margin-top: var(--mm-6);
+}
+
+.nl-closing-body {
+  margin: 0;
+}
+
+.nl-signature {
+  margin: var(--mm-2) 0 0;
+  line-height: 1.3;
+}
+
+.nl-signature-line {
+  display: block;
+}
+
+/* ---------- footer ---------- */
+
+.nl-footer {
+  margin-top: var(--mm-6);
+  padding-top: var(--mm-2);
+  border-top: var(--bw-hairline) solid var(--c-hairline);
+  color: var(--c-muted);
+  font-size: 8.5pt;
+  letter-spacing: 0.01em;
+  min-height: var(--footer-band);
+}
+
+/**
+ * Paged.js is handed the document's blocks as siblings rather than wrapped in
+ * the `.nl-doc` article, because a single root spanning every page is the case
+ * its splitting logic handles worst — it re-emits earlier children after a
+ * break, and the preview then shows the first sections twice.
+ *
+ * The typography the article would have supplied is therefore declared on the
+ * page's content area instead. The page box supplies the margins, so nothing
+ * here reinstates padding.
+ */
+.pagedjs_page_content > div {
+  color: var(--c-ink);
+  font-family: var(--f-sans);
+  font-size: 10.5pt;
+  line-height: 1.55;
+  hyphens: auto;
+  text-align: left;
+}
+
+.pagedjs_page .nl-footer {
+  display: none;
+}
+
+/* ---------- preview-only affordances ---------- */
+
+.nl-doc[data-interactive="true"] [data-block-id] {
+  cursor: pointer;
+}
+
+.nl-doc[data-interactive="true"] [data-confidence="low"] {
+  box-shadow: inset 2px 0 0 var(--c-muted);
+}

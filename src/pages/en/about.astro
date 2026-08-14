@@ -1,0 +1,17 @@
+---
+import AboutContent from "../../content/AboutContent.astro";
+import Static from "../../layouts/Static.astro";
+import { createTranslator } from "../../lib/i18n/index";
+
+const t = createTranslator("en");
+---
+
+<Static
+  lang="en"
+  page="about"
+  title={t("about.title")}
+  lead={t("about.lead")}
+  description="About the newsletter generator for local union clubs, who it is for, and what it deliberately does not do."
+>
+  <AboutContent lang="en" />
+</Static>

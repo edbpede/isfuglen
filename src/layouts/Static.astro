@@ -1,0 +1,52 @@
+---
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import type { PageKey } from "../lib/i18n/routes";
+import type { Lang } from "../lib/i18n/types";
+import Base from "./Base.astro";
+
+interface Props {
+  lang: Lang;
+  page: PageKey;
+  title: string;
+  lead: string;
+  description: string;
+}
+
+const { lang, page, title, lead, description } = Astro.props;
+
+/**
+ * The help, privacy and about pages ship zero JavaScript. That is not a
+ * micro-optimisation: a page whose whole purpose is to state that nothing runs
+ * against you should be provably inert (docs/PLAN.md §6.2).
+ *
+ * The one exception is the four-line preference writer below, which keeps the
+ * static pages and the workspace in agreement about the interface language
+ * after a language switch made by following a link (§9.4).
+ */
+---
+
+<Base lang={lang} title={`${title} — Nyhedsbrev`} description={description}>
+  <SiteHeader lang={lang} page={page} />
+
+  <main id="main" class="mx-auto max-w-5xl px-4 py-10">
+    <h1 class="font-serif text-3xl font-semibold text-ink">{title}</h1>
+    <p class="mt-2 max-w-2xl text-lg text-muted">{lead}</p>
+    <div class="prose mt-8 text-ink">
+      <slot />
+    </div>
+  </main>
+
+  <SiteFooter lang={lang} />
+
+  <script is:inline define:vars={{ lang }}>
+    // Landing here by following the language link is an explicit choice, so the
+    // preference follows the URL. Guarded by the prefix, never by navigator.language.
+    // Raw string, matching how @nanostores/persistent stores a plain atom.
+    try {
+      localStorage.setItem("nl.uiLang", lang);
+    } catch {
+      /* Storage disabled or full: the URL still decided this page's language. */
+    }
+  </script>
+</Base>

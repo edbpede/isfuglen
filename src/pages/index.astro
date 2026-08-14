@@ -1,0 +1,18 @@
+---
+import Workspace from "../islands/Workspace.svelte";
+import Base from "../layouts/Base.astro";
+---
+
+<Base
+  lang="da"
+  title="Nyhedsbrev til faglig klub"
+  description="Sæt dine noter ind, og få et nyhedsbrev, der ser ud, som om kredsen har en grafiker ansat. Alt bliver i din browser."
+>
+  <!--
+    `client:load` on the workspace island. This is one of the rare legitimate
+    uses: the island *is* the page's reason to exist and must be interactive
+    above the fold on first paint. `client:visible` would put a hydration delay
+    on the primary interaction target (docs/PLAN.md §6.3).
+  -->
+  <Workspace client:load initialLang="da" />
+</Base>

@@ -1,0 +1,17 @@
+---
+import AboutContent from "../content/AboutContent.astro";
+import Static from "../layouts/Static.astro";
+import { createTranslator } from "../lib/i18n/index";
+
+const t = createTranslator("da");
+---
+
+<Static
+  lang="da"
+  page="about"
+  title={t("about.title")}
+  lead={t("about.lead")}
+  description="Om nyhedsbrevsgeneratoren til faglig klub, hvem den er lavet til, og hvad den bevidst ikke gør."
+>
+  <AboutContent lang="da" />
+</Static>

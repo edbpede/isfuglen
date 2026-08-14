@@ -1,0 +1,12 @@
+---
+import Workspace from "../../islands/Workspace.svelte";
+import Base from "../../layouts/Base.astro";
+---
+
+<Base
+  lang="en"
+  title="Newsletter for your local union meeting"
+  description="Paste your notes and get a newsletter that looks like the branch has a designer on staff. Everything stays in your browser."
+>
+  <Workspace client:load initialLang="en" />
+</Base>
