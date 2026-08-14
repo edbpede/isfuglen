@@ -55,7 +55,7 @@ export const da = {
     summaryClean: "Vi fandt {sections} afsnit. Intet så usikkert ud.",
     show: "Vis",
     next: "Næste usikre punkt",
-    dismiss: "Luk",
+    dismiss: "Luk beskeden",
     uncertain: "Usikker",
     uncertainHint: "Vi var i tvivl om, hvordan dette afsnit skulle sættes op. Tjek det efter.",
   },

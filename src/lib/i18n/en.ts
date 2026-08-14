@@ -49,7 +49,7 @@ export const en: Messages = {
     summaryClean: "We found {sections} sections. Nothing looked uncertain.",
     show: "Show",
     next: "Next uncertain item",
-    dismiss: "Dismiss",
+    dismiss: "Dismiss this message",
     uncertain: "Uncertain",
     uncertainHint: "We were unsure how to lay this section out. Please check it.",
   },

@@ -30,6 +30,14 @@ export interface Settings {
   footerNote: string;
   previewZoom: number;
   dismissedEvictionNotice: boolean;
+  /**
+   * Whether the user has ever picked a document language. Until they have, a
+   * *new* document takes the interface language — a brand-new user choosing
+   * English almost certainly wants an English document, and forcing two
+   * switches would feel obtuse. After they have, `docLangDefault` decides, and
+   * the interface language never touches a document again (§9.1).
+   */
+  docLangChosen: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   footerNote: "Kreds 18 · DLF",
   previewZoom: 0,
   dismissedEvictionNotice: false,
+  docLangChosen: false,
 };
 
 export const settings = persistentAtom<Settings>("nl.settings", DEFAULT_SETTINGS, {

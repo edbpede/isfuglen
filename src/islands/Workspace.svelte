@@ -78,10 +78,14 @@
     document.documentElement.lang = resolved;
   });
 
-  /** The document language follows the interface only until it is set explicitly. */
-  $effect(() => {
-    store.followUiLang(lang as DocLang);
-  });
+  /**
+   * The document language for a *new* document (§9.1). The coupling to the
+   * interface language exists here and nowhere else: once a document exists,
+   * switching the interface must not relabel it.
+   */
+  function docLangForNewDocument(): DocLang {
+    return $settings.docLangChosen ? (($docLangDefault ?? "da") as DocLang) : (lang as DocLang);
+  }
 
   $effect(() => {
     if (typeof window === "undefined") return;
@@ -146,20 +150,19 @@
   /* ---------- transitions ---------- */
 
   function format(raw: string): void {
+    const docLang = docLangForNewDocument();
     const result = parseNewsletter(raw, {
-      lang: store.doc.docLang,
+      lang: docLang,
       organisation: $settings.organisation,
       footerNote: $settings.footerNote,
     });
-    result.doc.docLang = store.doc.docLang;
-    result.doc.docLangExplicit = store.doc.docLangExplicit;
     store.load(result.doc, result.report);
     mode = "workspace";
     status.announce(t("a11y.parseDone", { sections: result.report.sectionCount }));
   }
 
   function blank(): void {
-    store.reset(($docLangDefault ?? "da") as DocLang, $settings.organisation, $settings.footerNote);
+    store.reset(docLangForNewDocument(), $settings.organisation, $settings.footerNote);
     mode = "workspace";
   }
 
@@ -181,7 +184,7 @@
   function clearAll(): void {
     if (!confirm(t("workspace.clearConfirm"))) return;
     void clearCurrent();
-    store.reset(($docLangDefault ?? "da") as DocLang, $settings.organisation, $settings.footerNote);
+    store.reset(docLangForNewDocument(), $settings.organisation, $settings.footerNote);
     resumable = null;
     mode = "entry";
   }
@@ -189,6 +192,7 @@
   function setDocLang(next: DocLang): void {
     store.setDocLang(next);
     docLangDefault.set(next);
+    updateSettings({ docLangChosen: true });
     status.announce(
       next === "da"
         ? "Dokumentsproget er skiftet til dansk."

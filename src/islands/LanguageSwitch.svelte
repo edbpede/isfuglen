@@ -32,14 +32,20 @@
   function select(next: Lang): void {
     if (next === lang) return;
 
+    // Resolved before `onchange`: `lang` is a prop, so reading it afterwards
+    // returns the *new* language and `siblingPath` would point back where we
+    // came from.
+    const target =
+      typeof window === "undefined"
+        ? undefined
+        : siblingPath(lang, resolvePath(window.location.pathname).page);
+
     onchange(next);
 
     if (typeof document !== "undefined") {
       document.documentElement.lang = next;
     }
-    if (typeof window !== "undefined") {
-      const { page } = resolvePath(window.location.pathname);
-      const target = siblingPath(lang, page);
+    if (target !== undefined) {
       window.history.replaceState(null, "", target + window.location.search);
     }
 

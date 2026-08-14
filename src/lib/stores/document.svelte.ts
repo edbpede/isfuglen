@@ -69,17 +69,15 @@ export class DocumentStore {
    * Setting the document language explicitly severs its link to the interface
    * language permanently, for this document (§9.1). A Danish newsletter written
    * in an English interface is fully supported, and so is the reverse.
+   *
+   * There is deliberately no counterpart that re-syncs the two: the coupling
+   * exists at document creation and nowhere else. Switching the interface
+   * language must never relabel a document the user is already working on.
    */
   setDocLang(lang: DocLang, explicit = true): void {
     this.doc.docLang = lang;
     if (explicit) this.doc.docLangExplicit = true;
     this.touch();
-  }
-
-  /** Follows the interface language, but only while the user has not chosen. */
-  followUiLang(lang: DocLang): void {
-    if (this.doc.docLangExplicit) return;
-    this.doc.docLang = lang;
   }
 
   /* ---------- sections ---------- */
