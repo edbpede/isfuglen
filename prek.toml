@@ -271,11 +271,17 @@ groups = ["ci", "slow"]
 
 # ---------------------------------------------------------------------------
 # Keep this config itself honest. Manual/CI only — noise on every commit.
+#
+# `check-hooks-apply` is deliberately absent. It fails any hook that matches no
+# file in the current tree, which is precisely how the insurance hooks above are
+# supposed to sit: `forbid-new-submodules` matches nothing until someone adds a
+# submodule, and `check-illegal-windows-names` nothing until a file is named in
+# a way that breaks a Windows checkout. Running it in CI (`--hook-stage manual`,
+# see .github/workflows/code-quality.yml) therefore fails the quality gate for
+# the healthy state, and the only ways to satisfy it are to delete both guards
+# or to skip it — so it is not configured.
 # ---------------------------------------------------------------------------
 
 [[repos]]
 repo = "meta"
-hooks = [
-  { id = "check-hooks-apply", stages = ["manual"], groups = ["ci"] },
-  { id = "check-useless-excludes", stages = ["manual"], groups = ["ci"] },
-]
+hooks = [{ id = "check-useless-excludes", stages = ["manual"], groups = ["ci"] }]

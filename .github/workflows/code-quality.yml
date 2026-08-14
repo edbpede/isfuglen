@@ -1,0 +1,147 @@
+# Code quality gate: Biome (format + lint), prek hooks, type check, build.
+#
+# The `biome-migrate` job exists so Renovate's grouped "biome" pull requests can
+# carry the config migration a new Biome release may require: it runs the
+# repo-local `biome migrate`, commits the result as the GitHub Actions bot, and
+# pushes back to the same Renovate branch. It is the ONLY job granted
+# `contents: write`, and its `if:` restricts it to Renovate branches in this
+# repository — ordinary and forked pull requests can never reach the write path.
+#
+# Tests live in `tests.yml` and route loading in `smoke.yml`; this file owns
+# formatting, hooks, types and the build only.
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only by default; the migrate job opts into write for itself alone.
+permissions:
+  contents: read
+
+concurrency:
+  group: code-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biome-migrate:
+    name: Auto-migrate Biome config (Renovate only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Same-repository Renovate pull requests only. The fork comparison keeps a
+    # forked PR from ever being granted the write token below.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.actor == 'renovate[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v7
+        with:
+          # Check out the branch itself (not the detached merge commit) so the
+          # migration commit can be pushed back to the Renovate branch.
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Derived from the committed `packageManager` field, not `latest`.
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `bunx --bun biome` resolves the @biomejs/biome devDependency from
+      # node_modules, so the migration runs on the exact version Renovate just
+      # bumped to.
+      - name: Migrate Biome configuration
+        run: bunx --bun biome migrate --write
+
+      # Allowed to modify files. `continue-on-error` (not `|| true`) keeps a
+      # genuine failure visible in the UI while still letting the commit step
+      # capture whatever was fixed; the gate is the non-writing check below.
+      - name: Apply Biome formatting and safe fixes
+        continue-on-error: true
+        run: bunx --bun biome check --write .
+
+      - name: Commit and push migration result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if git diff --staged --quiet; then
+            echo "Biome configuration already current — nothing to commit."
+          else
+            git commit -m "chore: auto-migrate biome config"
+            git push
+          fi
+
+      # Authoritative, non-writing verification. Failures here fail the job.
+      - name: Verify Biome check passes
+        run: bunx --bun biome ci .
+
+  quality:
+    name: Format · lint · hooks · types · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [biome-migrate]
+    # `always() && !failure() && !cancelled()` runs this job when biome-migrate
+    # is SKIPPED (the normal case), because a skipped dependency would otherwise
+    # cascade and skip the entire quality gate. A genuine migrate failure still
+    # stops this job.
+    if: ${{ always() && !failure() && !cancelled() }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # On a Renovate PR this picks up the migration commit pushed above.
+          ref: ${{ github.head_ref || github.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Biome owns TS/JS/JSON/CSS here; Prettier owns .astro/.svelte/.md and is
+      # run by the prek hook below, so both formatters are covered.
+      - name: Biome format and lint check
+        run: bunx --bun biome ci .
+
+      # The repository's own prek hooks, rather than a reimplementation of them.
+      # `--hook-stage manual` is what reaches the stack guards, the hygiene
+      # hooks and the config meta-checks in one pass; `--group ci` would select
+      # the grouped subset only and silently drop the Svelte/UnoCSS/Astro
+      # guards.
+      #
+      # SKIP:
+      #   no-commit-to-branch — a local-commit guard, meaningless in CI where
+      #                         the checked-out ref legitimately is main.
+      #   build              — the manual-stage hook shells out to `bun run
+      #                         build`, which the dedicated step below already
+      #                         runs; skipping it halves the job's build time.
+      #
+      # Pinned to an exact tag: j178/prek-action publishes no floating v3 tag,
+      # so `@v3` is unresolvable. Renovate keeps this current.
+      - name: Run prek hooks
+        uses: j178/prek-action@v3.0.0
+        with:
+          extra-args: --all-files --hook-stage manual
+        env:
+          SKIP: no-commit-to-branch,build
+
+      # `bun run check` is `astro check` (the only thing that type-checks
+      # .astro) plus `svelte-check` over the islands.
+      - name: Astro and Svelte type check
+        run: bun run check
+
+      - name: Build
+        run: bun run build

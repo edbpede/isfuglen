@@ -1,0 +1,75 @@
+# The test tier. docs/PLAN.md repeatedly says a property is "asserted in CI";
+# this is the file that makes that true rather than aspirational: the parser and
+# model unit suites, the bundle budget of §6.4, and the Playwright suite that
+# carries the privacy interception test, the axe-core sweep over every screen
+# and the DOCX structure gate.
+#
+# Formatting, hooks, types and the plain build live in code-quality.yml, and
+# route loading in smoke.yml. Nothing is duplicated here.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Unit · bundle budget · end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Derived from the committed `packageManager` field, not `latest`.
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # tests/unit/export/docx.test.ts asserts the intrinsic width of the brand
+      # raster the DOCX export embeds. That file is a build artefact
+      # (`public/brand/*@300.png`, gitignored and regenerated on every build), so
+      # a clean checkout has to produce it before the unit suite can read it.
+      - name: Generate the brand raster
+        run: bun run scripts/build-logo-png.ts
+
+      # `bunfig.toml` scopes `bun test` to tests/unit; the Playwright specs are
+      # run below by their own runner.
+      - name: Unit tests
+        run: bun test
+
+      # Builds and then measures: the paginator, the DOCX writer, the editor and
+      # the draft schema must stay out of the initial workspace chunk.
+      - name: Bundle budget
+        run: bun run check:bundle
+
+      - name: Install browsers
+        run: bunx --bun playwright install --with-deps chromium
+
+      # playwright.config.ts starts its own server (`bun run build && bun run
+      # scripts/serve-dist.ts`), so the suite always runs against the built
+      # static site rather than a dev server with an HMR socket the privacy
+      # test would flag.
+      - name: End-to-end tests
+        run: bun run test:e2e
+
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

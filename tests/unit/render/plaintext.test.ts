@@ -55,7 +55,9 @@ describe("plain text", () => {
     expect(english).toContain("## DECISIONS");
     expect(english).toContain("## ACTION ITEMS");
     expect(english).toContain("[IMPORTANT]");
-    expect(english).toContain("Friday 14 August 2026");
+    // See tests/unit/i18n/format.test.ts: the comma in the English full date is
+    // ICU's, and it has changed between releases.
+    expect(english).toMatch(/Friday,? 14 August 2026/);
   });
 
   test("nothing is hard-wrapped — wrapping fights every target that reflows", () => {

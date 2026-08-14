@@ -1,0 +1,67 @@
+# Publish the built static site to GitHub Pages at https://isfugl.edbpede.net.
+#
+# The app is `output: "static"` with no adapter, no SSR and no API route, so the
+# deployable artefact is exactly `dist/`. peaceiris/actions-gh-pages force-pushes
+# that directory to the `gh-pages` branch and writes the CNAME file on every run,
+# which is why the custom domain survives a redeploy instead of being reset.
+#
+# Quality, smoke and test gates run on the pull request that produced the commit;
+# this workflow deliberately does not re-run them, it publishes what landed.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The default GITHUB_TOKEN needs write access to push the `gh-pages` branch.
+permissions:
+  contents: write
+
+# Never cancel a deploy in flight: the publish step force-pushes a branch, and
+# killing it mid-push is the one way to leave the site in a torn state. Queued
+# runs are serialised instead.
+concurrency:
+  group: deploy-github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # `workflow_dispatch` has no head_commit, hence the null-safe access — a
+    # manual redeploy (for example once DNS has propagated) must never be
+    # filtered out by the [skip ci] guard.
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    environment:
+      name: github-pages
+      url: https://isfugl.edbpede.net
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Derived from the committed `packageManager` field, not `latest`:
+          # a deploy must build with the same toolchain the gates validated.
+          bun-version-file: package.json
+
+      # `--frozen-lockfile` so a deploy can never resolve a dependency version
+      # that no pull request ever tested.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build project
+        run: bun run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          # Astro emits `_astro/`, and Jekyll drops underscore-prefixed paths.
+          # The action writes `.nojekyll` for us as long as Jekyll stays off.
+          enable_jekyll: false
+          cname: isfugl.edbpede.net

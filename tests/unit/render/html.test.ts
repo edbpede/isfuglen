@@ -99,7 +99,9 @@ describe("document rendering", () => {
     expect(english).toContain(">Decisions<");
     expect(english).toContain(">Action items<");
     expect(english).toContain(">Important<");
-    expect(english).toContain("Friday 14 August 2026");
+    // Punctuation-tolerant for the reason given in tests/unit/i18n/format.test.ts:
+    // ICU has moved the comma in `Friday, 14 August 2026` between releases.
+    expect(english).toMatch(/Friday,? 14 August 2026/);
     expect(english).toContain("15:30\u201317:00");
     // The user's own words are identical in both.
     expect(english).toContain("Klubmøde august");

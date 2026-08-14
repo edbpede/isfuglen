@@ -8,7 +8,10 @@ import UnoCSS from "unocss/astro";
 // to be visible here: `output: "static"` and nothing that could weaken it.
 export default defineConfig({
   output: "static",
-  site: "https://nyhedsbrev.example.org",
+  // The deployed origin (GitHub Pages, custom domain — see
+  // .github/workflows/deploy.yml). Astro only uses it to build absolute URLs;
+  // the site itself is served from the domain root, so no `base` is needed.
+  site: "https://isfugl.edbpede.net",
   /**
    * The privacy guarantee, enforced rather than asserted (docs/PLAN.md §16.4).
    *
