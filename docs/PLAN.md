@@ -5,6 +5,27 @@
 **Binding conventions:** `.augment/rules/bun-unocss-dev-pro.md`
 **Plan language:** English. All interface-copy examples are Danish first, English second.
 
+### Section map
+
+All twenty-four required sections are present. Two are added: §0 records a blocker found during preparation, and §2 is the requested decision table, placed early so a reviewer sees every decision before the argument for it.
+
+| Required | Here | Required | Here |
+| --- | --- | --- | --- |
+| 1. Feasibility conclusion | §1 | 13. DOCX export strategy | §14 |
+| 2. Product experience and user flow | §3 | 14. Clipboard strategy | §15 |
+| 3. Information architecture | §4 | 15. Local storage and privacy | §16 |
+| 4. Text wireframes | §5 | 16. Accessibility | §17 |
+| 5. Technical architecture | §6 | 17. Component inventory | §18 |
+| 6. Astro integration and editor choice | §7 | 18. Project and folder structure | §19 |
+| 7. Localisation architecture | §8 | 19. Testing strategy | §20 |
+| 8. Interface vs. document language | §9 | 20. Browser compatibility | §21 |
+| 9. Structured document model | §10 | 21. Risks and mitigations | §22 |
+| 10. Rule-based formatting strategy | §11 | 22. Implementation plan | §23 |
+| 11. Visual direction and design tokens | §12 | 23. MVP acceptance criteria | §24 |
+| 12. PDF export strategy | §13 | 24. Open questions | §25 |
+
+The required localisation acceptance criteria are §24.2, listed in the order given in the brief.
+
 ---
 
 ## 0. Preconditions and blockers
@@ -16,7 +37,7 @@ Two items must be resolved before Milestone 5 (visual identity). Neither blocks 
 | `018-ishoej.svg` | **Not present in the repository or workspace** | Blocks exact palette extraction and logo geometry |
 | `018-ishoej.png` | **Not present in the repository or workspace** | Blocks DOCX/clipboard logo embedding |
 
-The brief describes both files as attached; neither exists on disk. This plan therefore specifies a **drop-in contract** (§11.3) so that adding the two files completes the visual layer without refactoring, and anchors the provisional palette on Danmarks Lærerforening's own published identity — `#253154` navy, verified from the `theme-color` and `msapplication-TileColor` meta tags on `dlf.org`, plus the gold/yellow the DLF mark uses in its footer treatment. **Every colour marked `provisional` in §11.4 must be re-derived from the actual SVG before the design is signed off.**
+The brief describes both files as attached; neither exists on disk. This plan therefore specifies a **drop-in contract** (§12.8) so that adding the two files completes the visual layer without refactoring, and anchors the provisional palette on Danmarks Lærerforening's own published identity — `#253154` navy, verified from the `theme-color` and `msapplication-TileColor` meta tags on `dlf.org`, plus the gold/yellow the DLF mark uses in its footer treatment. **Every colour marked `provisional` in §12.4 must be re-derived from the actual SVG before the design is signed off.**
 
 Also noted: the `frontend-design` skill referenced in the brief is not available in this runtime (runtime skill discovery is disabled). This plan proceeds without it.
 
@@ -50,10 +71,10 @@ Also noted: the `frontend-design` skill referenced in the brief is not available
 | **Editor** | TipTap 3, Lexical, raw ProseMirror, Quill, Editor.js | **TipTap 3 core, headless, no UI packages** | Framework-agnostic (mounts on a DOM node inside a Svelte island); strict ProseMirror schema is precisely the "user cannot break the template" mechanism; best-in-class paste transformation; JSON output maps cleanly to our own model. | ProseMirror is a large conceptual surface; ~90 KB gz for core + pm + our extension set. |
 | **Editor architecture** | One editor over the whole document; app-owned blocks with per-section rich-text editors | **App-owned block structure, TipTap per section body** | Section reorder becomes a plain array move (trivially keyboard-accessible); metadata (deadline, owner) uses real labelled form inputs, not node views; block structure is structurally unbreakable because it lives outside the editor. | No cross-section selection; several ProseMirror instances (mitigated by lazy mount on first focus). |
 | **Source of truth** | TipTap JSON; custom `NewsletterDoc` | **Custom `NewsletterDoc`; TipTap JSON is an editing detail** | One model drives editor, preview, print, DOCX, clipboard and drafts. Export code never imports TipTap. | Two bidirectional converters to write and test. |
-| **Auto-formatting** | Rule engine; LLM; hybrid | **Deterministic rule registry, Danish rules first-class** | No backend, no keys, no cost, no latency, fully testable, privacy-safe by construction. | Cannot handle genuinely unstructured prose as well as an LLM; mitigated by an explicit review step (§10.5). |
+| **Auto-formatting** | Rule engine; LLM; hybrid | **Deterministic rule registry, Danish rules first-class** | No backend, no keys, no cost, no latency, fully testable, privacy-safe by construction. | Cannot handle genuinely unstructured prose as well as an LLM; mitigated by an explicit review step (§3.4). |
 | **Localisation** | `i18next`, `astro-i18next`, Paraglide, hand-rolled typed catalogs | **Hand-rolled typed catalogs + 2 nanostores** | ~60 lines of code, compile-time completeness enforcement, no runtime framework in the bundle, third language = one file. | No plural/ICU machinery — we add the two plural rules we actually need. |
 | **UI language mechanism** | Route-per-locale only; client-only strings; hybrid | **Astro i18n routes for static chrome + both catalogs in the island, URL kept in sync** | Instant switching with no navigation and no editor-state loss; reload lands on the correct prefix so there is no flash. | Both catalogs ship (~3 KB gz). Accepted for instant, state-preserving switching. |
-| **PDF** | Print CSS only; jsPDF + html2canvas; jsPDF/pdf-lib text API; **Paged.js** + print | **Paged.js paginates both the on-screen preview and the printed document; native print CSS is the always-present fallback** | Only browser-native route that gives real page boxes, in-content page numbers, running headers/footers, and *cross-browser-uniform* orphan/widow control (Firefox does not implement `orphans`/`widows`). Preview matches export by construction. | pagedjs 0.4.3, last npm publish 2023 — maintenance risk; ~120 KB. Fallback path is mandatory (§21.1). |
+| **PDF** | Print CSS only; jsPDF + html2canvas; jsPDF/pdf-lib text API; **Paged.js** + print | **Paged.js paginates both the on-screen preview and the printed document; native print CSS is the always-present fallback** | Only browser-native route that gives real page boxes, in-content page numbers, running headers/footers, and *cross-browser-uniform* orphan/widow control (Firefox does not implement `orphans`/`widows`). Preview matches export by construction. | pagedjs 0.4.3, last npm publish 2023 — maintenance risk; ~120 KB. Fallback path is mandatory (§13.2). |
 | **PDF trigger** | Direct download button; print dialog | **Print dialog, honestly labelled "Udskriv eller gem som PDF"** | A true download requires a generator library that would rasterise or reimplement typesetting. Print keeps text selectable, logo vector, fonts real. | One extra user step and a browser-owned dialog we cannot style. |
 | **DOCX** | `docx` (dolanmiu); `@turbodocx/html-to-docx`; HTML-in-`.doc` | **`docx` v9.7 with `Packer.toBlob()`** | Real OOXML, first-class headers/footers, `PageNumber`, numbering, `ImageRun`, run-level `w:lang`. HTML-conversion libraries give us far less control over the exact structure we need. | We hand-map every block type; ~180 KB gz including jszip. |
 | **DOCX logo** | Rasterise SVG in-browser at export; use supplied PNG; build-time high-res PNG | **Build-time high-res PNG from the SVG (`@resvg/resvg-js`), supplied PNG as fallback** | Deterministic, no canvas/CORS tainting, no runtime cost, guaranteed to render in older Word, LibreOffice and Google Docs (which handle DOCX-embedded SVG poorly). | One build step; the PNG is a build artefact that must be regenerated if the SVG changes. |
@@ -113,7 +134,7 @@ After parsing, the workspace opens with a dismissible review strip:
 > **Vi har fundet 6 afsnit, 1 dagsorden og 3 handlinger. Tjek de 2 punkter, vi var i tvivl om.**
 > *We found 6 sections, 1 agenda and 3 action items. Check the 2 items we were unsure about.*
 
-Low-confidence blocks (§10.6) carry an unobtrusive marker in the editor pane — a dotted left rule plus the word **Usikker** / *Uncertain*, never colour alone. Clicking the strip's counter walks the user through them. Dismissing the strip is permanent for that draft.
+Low-confidence blocks (§11.6) carry an unobtrusive marker in the editor pane — a dotted left rule plus the word **Usikker** / *Uncertain*, never colour alone. Clicking the strip's counter walks the user through them. Dismissing the strip is permanent for that draft.
 
 This is the mechanism that makes a deterministic parser acceptable: it is allowed to be wrong, as long as it is honest about where.
 
@@ -953,3 +974,976 @@ interface Restructurer {
 - **Rule-based output always computed first** and shown as the diff baseline, so the user can reject the AI result in one click.
 
 Because `NewsletterDoc` is the contract and not HTML, an AI path is a swap of one implementation. No architectural work is deferred; nothing about v1 anticipates it beyond this interface.
+
+---
+
+## 12. Visual direction and design tokens
+
+### 12.1 Logo analysis — and its current limits
+
+The two logo files are absent (§0). What can be established without them:
+
+- The mark belongs to **Ishøj Lærerkreds, Kreds 18**, a local branch of **Danmarks Lærerforening**.
+- DLF's own published identity is a **deep navy** — `#253154`, verified from the `theme-color` and `msapplication-TileColor` meta tags on `dlf.org` — paired with a **warm gold/yellow** used for the mark itself and for accents.
+- Kreds marks in DLF's federation are typically a wordmark plus a compact symbol, built for small reproduction on letterheads and meeting papers.
+
+The palette below is therefore anchored on the parent organisation's verified navy, with the accent held as **provisional**. When the SVG lands, one task closes the loop: extract its actual fill values, replace the provisional tokens, re-run the contrast table in §12.4, and confirm the logo's intrinsic aspect ratio against §12.8.
+
+**What must not happen:** inventing a mark, recolouring the supplied one to fit the palette, or letting the logo become a decorative motif. The palette adapts to the logo, never the reverse.
+
+### 12.2 Design intent
+
+Six words from the brief — modern, calm, trustworthy, professional, approachable, Scandinavian — resolve into four concrete rules:
+
+1. **Generous white space over rules and boxes.** Structure is signalled by spacing first, by a hairline second, by a fill only where a block genuinely interrupts the reading flow.
+2. **One accent, used sparingly.** Gold appears as a short rule under the masthead, as the agenda number chip, and as the important-notice bar. Nowhere else.
+3. **Type does the work.** Hierarchy comes from size, weight and spacing, not from colour or boxes.
+4. **The page looks like a document, not a web page.** No cards with shadows in the printed artefact, no gradients, no icon soup. Shadows exist in the *application chrome* only.
+
+The result should read as though the kreds has a designer on staff — which is exactly the promise in §3.1.
+
+### 12.3 Typography
+
+| Role | Screen / PDF | Size | Weight | Line height | Tracking |
+| --- | --- | --- | --- | --- | --- |
+| Document title (`h1`) | Source Serif 4 | 30 pt / 40 px | 600 | 1.15 | −0.01em |
+| Subtitle | Source Sans 3 | 14 pt / 19 px | 400 | 1.4 | 0 |
+| Section heading (`h2`) | Source Serif 4 | 16 pt / 21 px | 600 | 1.25 | 0 |
+| Sub-heading (`h3`) | Source Sans 3 | 12 pt / 16 px | 600 | 1.3 | 0.02em, small caps feel via uppercase |
+| Body | Source Sans 3 | 10.5 pt / 14 px | 400 | 1.55 | 0 |
+| Meta line (date, location) | Source Sans 3 | 9.5 pt / 13 px | 500 | 1.4 | 0.01em |
+| Info-box body | Source Sans 3 | 10 pt / 13.5 px | 400 | 1.5 | 0 |
+| Footer | Source Sans 3 | 8.5 pt / 11.5 px | 400 | 1.4 | 0.01em |
+
+**Why this pairing.** Source Serif 4 gives the masthead and section headings the authority a union document wants without tipping into officialese; Source Sans 3 is a humanist sans that stays warm at 10.5 pt and holds up in a Word substitution scenario. They were designed to work together, which removes an entire category of pairing risk. Both are SIL OFL 1.1 — free for web use, embedding and commercial distribution — and both carry complete Danish coverage including `æ ø å Æ Ø Å` and the `»«` quotation marks.
+
+**Why not Inter.** Inter is the safe modern default and would not be wrong, but it is neutral to the point of anonymity and its default figures read coldly in running text. This document should feel like it came from people, not from a dashboard.
+
+**Loading.** Self-hosted via `@fontsource-variable/source-sans-3` and `@fontsource-variable/source-serif-4`, subset to `latin` and `latin-ext` (the latter is not strictly required for Danish but costs little and covers pasted Nordic and German names). `font-display: swap` for UI; **`font-display: block` with a short preload for the preview surface**, because a font swap mid-pagination causes Paged.js to reflow and page breaks to jump. No Google Fonts request — self-hosting is also the GDPR-clean choice for a union (§15.4).
+
+**Body-text measure.** 62–72 characters at A4 with the margins in §12.7. That falls in the comfortable range without needing columns.
+
+### 12.4 Colour
+
+All ratios below are computed, not estimated.
+
+**Core**
+
+| Token | Value | Use | Contrast |
+| --- | --- | --- | --- |
+| `--c-ink` | `#1A2340` | Body text, `h1` | 15.46:1 on white |
+| `--c-brand` | `#253154` | Headings, header rule, footer text | 12.76:1 on white |
+| `--c-brand-mid` | `#3C4E7A` | Links, secondary emphasis | 8.19:1 on white |
+| `--c-muted` | `#4A5262` | Meta lines, captions | 7.85:1 on white |
+| `--c-accent` | `#F2B233` *(provisional)* | Rules, chips, notice bar — **never text** | 1.88:1 on white |
+| `--c-surface` | `#FFFFFF` | Page | — |
+| `--c-surface-sunken` | `#F7F8FA` | App chrome background | ink 12.01:1 |
+| `--c-hairline` | `#DFE3EB` | Rules, borders | non-text |
+
+**Semantic block fills** — every one carries `--c-ink` or `--c-brand` as its text colour, so all clear AA comfortably:
+
+| Block | Fill | Bar / accent | Text contrast |
+| --- | --- | --- | --- |
+| Info notice | `#E7EDF7` | `--c-brand-mid` | 10.85:1 |
+| Important notice | `#FDF3DD` | `--c-accent` | 11.57:1 |
+| Decisions | `#EAF0E9` | `#0F5132` | 11.02:1 |
+| Action items | `#FBEAE8` | `#B02A1E` | 10.96:1 |
+| Quote | none | `--c-hairline` left rule | 15.46:1 |
+
+**The gold rule, stated once and enforced.** `--c-accent` is 1.88:1 on white. It is **never** used for text, icons carrying meaning, or focus rings. It is used as: a 3 px rule beneath the masthead, the fill of agenda number chips (navy text on gold is 6.80:1 — AA for normal text), and the left bar of the important-notice block. A lint rule and a code-review check both enforce this, because it is the single easiest way for a well-meaning future change to break accessibility.
+
+**Colour is never the only signal.** Each semantic block carries a text label in the document language — `Vigtigt` / *Important*, `Beslutninger` / *Decisions*, `Handlinger` / *Action items* — plus a distinct left-bar treatment (solid, double, dotted). A greyscale print and a monochrome screen reader both retain the full meaning.
+
+### 12.5 Spacing
+
+A 4 px base, expressed in millimetres on the page so print and screen stay in step.
+
+| Token | Screen | Print | Use |
+| --- | --- | --- | --- |
+| `--sp-1` | 4 px | 1 mm | Inline gaps |
+| `--sp-2` | 8 px | 2 mm | List item spacing |
+| `--sp-3` | 12 px | 3 mm | Paragraph spacing |
+| `--sp-4` | 16 px | 4 mm | Inside info boxes |
+| `--sp-5` | 24 px | 6 mm | Between blocks |
+| `--sp-6` | 32 px | 8 mm | Before a section heading |
+| `--sp-7` | 48 px | 12 mm | After the masthead |
+
+Vertical rhythm rule: **space before a heading is always larger than space after it.** This is what makes a heading read as belonging to the text below rather than floating between two blocks, and it is the cheapest way to make an amateur layout look considered.
+
+### 12.6 Borders, radii, shadows, focus
+
+| Token | Value | Note |
+| --- | --- | --- |
+| `--bw-hairline` | 1 px / 0.25 mm | Rules and box outlines |
+| `--bw-bar` | 4 px / 1 mm | Semantic block left bars |
+| `--bw-brand` | 3 px / 0.8 mm | Masthead rule |
+| `--r-sm` | 3 px | Info boxes, chips |
+| `--r-md` | 6 px | App chrome controls |
+| `--r-none` | 0 | **Everything in the printed document except info boxes and chips** |
+| `--shadow-chrome` | `0 1px 2px rgb(37 49 84 / .06), 0 4px 12px rgb(37 49 84 / .08)` | App chrome only |
+| `--shadow-page` | `0 2px 8px rgb(37 49 84 / .10)` | The A4 sheet in the preview pane; **removed in print** |
+| `--focus-ring` | `0 0 0 2px #FFFFFF, 0 0 0 4px #3C4E7A` | 3.4:1 against white, 2 px thick — meets WCAG 2.2 SC 2.4.11 |
+
+Focus is never conveyed by colour change alone; the ring is a geometric addition. The white inner ring guarantees the indicator stays visible on both light and tinted backgrounds.
+
+### 12.7 A4 layout and grid
+
+```
+   210 mm
+┌─────────────────────────────────────────────┐  ▲
+│            18 mm top margin                 │  │
+│  ┌────────────────────────────────────────┐ │  │
+│  │ [logo 32mm]              Ishøj         │ │  │  header band, 22 mm
+│  │                          Lærerkreds    │ │  │
+│  │ ══════════════════════════════════════ │ │  │  gold rule, 0.8 mm
+│  ├────────────────────────────────────────┤ │  │
+│  │                                        │ │  │
+│  │  Klubmøde august              (h1)     │ │  │
+│  │  Referat fra mødet         (subtitle)  │ │  │
+│  │  fredag den 14. august 2026   (meta)   │ │  │
+│  │  kl. 15.30–17.00 · Lærerværelset       │ │  │
+│  │                                        │ │  │  content column
+│  │  ─────────────────────────────────     │ │  │  170 mm
+│  │                                        │ │  │
+│  │  DAGSORDEN                    (h2)     │ │  │  297 mm
+│  │  ① Godkendelse af referat              │ │  │
+│  │  ② Nyt fra kredsen                     │ │  │
+│  │                                        │ │  │
+│  │  ▍ VIGTIGT                             │ │  │
+│  │  ▍ Frist for tilmelding er 20. august. │ │  │
+│  │                                        │ │  │
+│  └────────────────────────────────────────┘ │  │
+│  ─────────────────────────────────────────  │  │  footer rule
+│  Ishøj Lærerkreds · Kreds 18 · DLF   1 / 3  │  │  footer band, 12 mm
+│            18 mm bottom margin              │  ▼
+└─────────────────────────────────────────────┘
+   20 mm side margins
+```
+
+- **Page:** A4 portrait, 210 × 297 mm.
+- **Margins:** 18 mm top/bottom, 20 mm left/right. Comfortably inside the non-printable area of every common office printer (typically ≤ 6.4 mm), so nothing clips.
+- **Content column:** 170 mm — one column, no grid subdivision. A newsletter of this length does not need columns, and columns fight both Word export and mobile preview.
+- **Header band:** 22 mm, repeated on every page. Page 1 shows the full logo lockup; pages 2+ show a reduced version (§12.8).
+- **Footer band:** 12 mm, organisation line left, page number right.
+- **Baseline:** 4 mm vertical rhythm. Blocks snap to it; body text does not need to, and forcing it would create awkward gaps around lists.
+
+### 12.8 Logo placement and sizing
+
+| Context | Width | Placement | Format |
+| --- | --- | --- | --- |
+| App header | 28 px height | Left, beside the app title | SVG |
+| Document page 1 | 32 mm | Header band, left-aligned | SVG (print), PNG (DOCX) |
+| Document pages 2+ | 20 mm | Header band, left-aligned | SVG (print), PNG (DOCX) |
+| DOCX header | 32 mm | Header, left | PNG @ 300 ppi ≈ 378 px wide |
+| Clipboard HTML | Not included | — | See §14.3 |
+
+**Rules.** Aspect ratio comes from the SVG's `viewBox` and is never overridden — width is set, height is `auto`, and the DOCX `ImageRun` receives explicitly computed dimensions derived from the same ratio. No recolouring, no cropping, no filters, no rotation, no drop shadow, no placement over a tinted background. Minimum clear space on all sides equals the logo's cap height. Minimum reproduction width 18 mm; below that the wordmark stops being legible and the mark should be omitted rather than shrunk.
+
+**Contract for the missing files** (§0), so dropping them in completes the work:
+
+```
+public/brand/
+  ishoej-kreds18.svg      # the supplied 018-ishoej.svg, renamed, unmodified
+  ishoej-kreds18.png      # the supplied 018-ishoej.png, unmodified
+  ishoej-kreds18@300.png  # BUILD ARTEFACT — generated from the SVG, see §14.4
+```
+
+### 12.9 Block styles
+
+| Block | Treatment |
+| --- | --- |
+| **Heading (h2)** | Serif, brand navy, 8 mm above / 3 mm below, no rule, no box |
+| **Sub-heading (h3)** | Sans, uppercase, tracked, muted, 6 mm above / 2 mm below |
+| **Paragraph** | 3 mm below, no indent, ragged right |
+| **List** | 4 mm hanging indent; bullets are a small navy square, numbers are navy |
+| **Agenda** | Numbered chips: gold circle, navy numeral, 5 mm; item text aligned to a hanging indent; optional presenter in muted small caps on the right |
+| **Decisions** | Green-tinted fill, solid dark-green 1 mm left bar, label `BESLUTNINGER`, checkmark glyph before each item |
+| **Action items** | Red-tinted fill, solid 1 mm left bar, label `HANDLINGER`; each item is `task — owner · deadline` with owner in medium weight and deadline in the document locale |
+| **Important notice** | Warm-tinted fill, gold 1 mm left bar, label `VIGTIGT`, 4 mm padding |
+| **Info notice** | Blue-tinted fill, brand-mid 1 mm left bar, label `TIL ORIENTERING` |
+| **Quote** | No fill; 1 px hairline left rule, italic, 6 mm left indent, attribution in muted small caps below |
+| **Contact** | Hairline rule above, two-column definition-list layout, links in brand-mid with underline |
+| **Closing** | 8 mm above, no rule; signature lines tight at 1.3 line height |
+
+**Consistent without being rigid.** The system holds because every block draws from the same three-part vocabulary — *fill, bar, label* — and varies only which parts it uses and in what colour. Adding an eleventh block type later means picking from that vocabulary, not inventing a new visual language. The variation between a quote (bar only), a paragraph (nothing) and a decision block (all three) gives the page rhythm without any block feeling foreign.
+
+### 12.10 Token implementation
+
+`uno.config.ts` is the source of truth per the house rules; tokens are declared once in the UnoCSS `theme` and mirrored as CSS custom properties for the print stylesheet, which needs raw values rather than utility classes.
+
+```ts
+// uno.config.ts (shape)
+theme: {
+  colors: {
+    ink: "#1A2340",
+    brand: { DEFAULT: "#253154", mid: "#3C4E7A" },
+    accent: "#F2B233",
+    hairline: "#DFE3EB",
+    // semantic fills…
+  },
+  fontFamily: {
+    sans: "'Source Sans 3 Variable', system-ui, sans-serif",
+    serif: "'Source Serif 4 Variable', Georgia, serif",
+  },
+}
+```
+
+**Two constraints from the house rules that shape this:** UnoCSS only generates classes it finds by scanning source, so semantic block variants are written as **full literal class strings** selected by a lookup map — never as `` `bg-${tone}-50` ``. And `presetWind4` is the only preset; `presetUno` and `presetWind3` are superseded. Both are enforced at commit time by the `deny-pattern` hooks in `prek.toml`.
+
+---
+
+## 13. PDF export strategy
+
+### 13.1 Options
+
+| Approach | Text selectable | Logo sharp | Page numbers in content | Cross-browser break control | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| **A. Print CSS + `window.print()`** | Yes | Yes (vector) | **No** | **No** — Firefox does not implement `orphans`/`widows` | Necessary, insufficient alone |
+| **B. jsPDF + html2canvas** | **No** — rasterised | **No** | Yes | N/A | Reject |
+| **C. jsPDF / pdf-lib text API** | Yes | Yes | Yes | Full, but hand-built | Reject for v1 |
+| **D. Paged.js + `window.print()`** | Yes | Yes | **Yes** | **Yes** — implemented in JS, identical everywhere | **Recommended** |
+
+**Why B is rejected outright.** `html2canvas` produces a bitmap. Selectable text disappears, the logo becomes pixels, file size multiplies, and screen readers get nothing. The brief explicitly asks to avoid rasterising unless nothing else works — and something else works.
+
+**Why C is rejected for v1.** `pdf-lib` and jsPDF's text API give total control, and would deliver a genuine one-click download. The cost is reimplementing text layout: line breaking, Danish hyphenation, list wrapping, widow control, table-free info boxes, font subsetting for `æøå`. That is weeks of work with a long tail of typographic bugs, for a benefit (download vs. print dialog) that costs the user one click. Revisit only if the print flow proves unacceptable in real use.
+
+**Why A alone is insufficient.** `@page` margin boxes — `@top-center`, `@bottom-right`, `counter(page)` — are specified in CSS Paged Media but implemented by **no** current browser. Only the browser's own print-dialog header/footer can show page numbers, and the user controls whether those appear. Firefox additionally does not support `orphans` and `widows`, so "no isolated heading at the bottom of a page" would hold in Chrome and Safari and silently fail in Firefox.
+
+### 13.2 Recommendation
+
+**Paged.js paginates both the on-screen preview and the printed document. Native print CSS is a mandatory fallback layer.**
+
+Three reasons, in order of weight:
+
+1. **The preview matches the export by construction.** The same engine, the same DOM, the same stylesheet produce both. This is not a testing burden we take on; it is a property of the design.
+2. **Page breaks behave identically in all four browsers**, because Paged.js implements orphans, widows and break avoidance itself rather than delegating to four different layout engines.
+3. **Page numbers and running headers work** — `counter(page)`, `counter(pages)` and named page margin boxes are Paged.js's core competence.
+
+**Fallback contract.** The print stylesheet is authored to be correct on its own. If Paged.js fails to load, throws, or exceeds a 3-second budget, the preview shows a continuous (unpaginated) document with a quiet notice, and printing uses the plain stylesheet. The result is still a correct, selectable, sharp multi-page PDF — it simply loses in-content page numbers and uniform widow control. The fallback costs nothing extra because the print CSS must exist regardless.
+
+**Isolation.** Paged.js rewrites the DOM it is given. It therefore runs on a **cloned, non-editable render** of `NewsletterDoc` inside the preview pane, never on the editor. Re-pagination is debounced at 400 ms after the last edit, runs against a detached fragment, and swaps in on completion — so typing never fights the paginator.
+
+### 13.3 What the print stylesheet must specify
+
+```css
+@page {
+  size: A4 portrait;
+  margin: 18mm 20mm;
+}
+```
+
+| Concern | Rule |
+| --- | --- |
+| Isolated heading | `h2, h3 { break-after: avoid; }` plus Paged.js's own check |
+| Orphans / widows | `p { orphans: 3; widows: 3; }` |
+| Block integrity | Info boxes, quotes and action items: `break-inside: avoid` |
+| Lists across pages | `li { break-inside: avoid; }` — the item stays whole, the list continues; numbering continues because Paged.js preserves the counter |
+| Long links | `a { word-break: break-word; overflow-wrap: anywhere; }` |
+| Long Danish words | `hyphens: auto` with `lang="da"` on the preview root — Chrome, Firefox and Safari all ship Danish hyphenation patterns. This matters: `arbejdstidsaftale` and `medarbejderrepræsentant` are ordinary words here |
+| Very long content | No cap. A 30-page document paginates; performance is monitored (§22, risk 7) |
+| Chrome background bug | `-webkit-print-color-adjust: exact; print-color-adjust: exact;` on tinted blocks — without it, Chrome drops the fills |
+| Chrome extras | Hide app chrome with `@media print { .app-chrome { display: none } }` |
+| Shadows | `--shadow-page` removed in print |
+
+### 13.4 Locale in the PDF
+
+- The preview root carries `lang={docLang}`, which drives hyphenation and is inherited by the print output.
+- All generated labels come from `labels/[docLang]`.
+- Dates come from `format.ts` with the matching locale.
+- **Document metadata is a known limitation.** The browser print pipeline derives the PDF title from `document.title` and does not expose `/Lang` or `/Subject`. The mitigation: set `document.title` to `"<title> — <organisation>"` immediately before `window.print()` and restore it afterwards, so the saved filename and the PDF title are correct. Full metadata control is available in DOCX (§14.3) and would come with a v2 generator.
+
+### 13.5 Download vs. print — the honest difference
+
+| | Direct "Hent PDF" | "Udskriv eller gem som PDF" |
+| --- | --- | --- |
+| User steps | 1 — file appears in Downloads | 2 — dialog opens, choose destination, save |
+| Filename | We control it | Browser suggests from `document.title`; user may change |
+| Requires | A PDF generator in the bundle | Nothing |
+| Text quality | Depends entirely on the generator | Native — real fonts, real kerning, selectable |
+| Logo | Depends on the generator | Vector |
+| Metadata | Full control | Title only |
+| Failure mode | Silent wrong layout | Visible in the print preview before saving |
+| Available in v1 | **No** | **Yes** |
+
+**Recommended copy.** The primary button says what actually happens:
+
+- **"Udskriv eller gem som PDF"** / *"Print or save as PDF"*
+- Helper line beneath: **"Vælg »Gem som PDF« i printdialogen."** / *"Choose 'Save as PDF' in the print dialog."*
+
+**"Hent PDF" / "Download PDF" is deliberately not used in v1**, because it would promise a download the app cannot deliver. Reserve the label for a future release that ships a real generator. A tool that describes itself accurately is trusted; one that mislabels a button teaches the user to distrust every other label.
+
+### 13.6 Known browser behaviour
+
+| Browser | Notes |
+| --- | --- |
+| Chrome / Edge | Best case. Requires `print-color-adjust: exact` for fills. "Save as PDF" is a built-in destination |
+| Firefox | Good with Paged.js. Without it, `orphans`/`widows` are ignored. "Save to PDF" built in |
+| Safari (macOS) | Good. Save-as-PDF lives behind the dialog's PDF dropdown, which users miss — the helper line should mention it |
+| Safari (iOS) | **Weakest.** Print goes via the share sheet, and saving requires pinch-to-zoom on the preview. Documented in `/hjaelp`; DOCX or clipboard is the better mobile route |
+
+---
+
+## 14. DOCX export strategy
+
+### 14.1 Library
+
+**`docx` v9.7 (dolanmiu), `Packer.toBlob()`, dynamically imported on first use.**
+
+Alternatives weighed: `@turbodocx/html-to-docx` converts HTML and is quicker to wire up, but it hands us far less control over numbering definitions, header/footer construction and run-level language — all of which are explicit requirements here. Writing an HTML file with a `.doc` extension is not DOCX and is rejected.
+
+`docx` produces genuine OOXML, works in the browser, and covers everything we need: `Header`, `Footer`, `PageNumber.CURRENT` / `TOTAL_PAGES`, `ImageRun`, `ExternalHyperlink`, abstract numbering definitions, table shading and borders, and per-run `language`.
+
+### 14.2 Mapping
+
+| Model | DOCX |
+| --- | --- |
+| `meta.title` | `Paragraph`, style `Title`, Georgia 22 pt, brand navy |
+| `meta.subtitle` | `Paragraph`, style `Subtitle`, Calibri 11 pt, muted |
+| Date / time / location | One `Paragraph`, Calibri 9.5 pt, formatted via `format.ts` in `docLang` |
+| `Section.heading` (level 2) | `HeadingLevel.HEADING_1`, Georgia 13 pt, brand navy, `keepNext: true` |
+| `Section.heading` (level 3) | `HeadingLevel.HEADING_2`, Calibri 10 pt bold, uppercase |
+| `ParagraphBlock` | `Paragraph` of `TextRun[]` from `RichText` |
+| `InlineText` marks | `TextRun({ bold, italics })` |
+| `InlineLink` | `ExternalHyperlink` wrapping a styled `TextRun` (brand-mid, underlined) |
+| `InlineBreak` | `TextRun({ break: 1 })` |
+| `ListBlock` | `Paragraph({ numbering: { reference, level: 0 } })`, two abstract definitions: `nl-bullet`, `nl-number` |
+| `AgendaBlock` | Numbered list under `nl-agenda` with a bold numeral; presenter appended as a muted run |
+| `DecisionBlock` / `ActionBlock` / `NoticeBlock` | **1 × 1 `Table`**, full-width, cell `shading` in the block fill, `borders` with a thick coloured `left` and `none` elsewhere; label paragraph in bold caps, then content |
+| `QuoteBlock` | `Paragraph` with `indent.left` and a left `border`, italic; attribution as a muted run |
+| `ContactBlock` | 2-column borderless `Table`; emails as `mailto:` hyperlinks |
+| `ClosingBlock` | Paragraphs, tight spacing |
+| Header | `Header` with `ImageRun` (logo) + organisation `TextRun`, bottom border in brand navy |
+| Footer | `Footer` with organisation line and `PageNumber.CURRENT` / `TOTAL_PAGES` |
+| Page | `size: { orientation: portrait, width: 11906, height: 16838 }` twips; `margin: { top: 1021, bottom: 1021, left: 1134, right: 1134 }` (18 mm / 20 mm) |
+
+**Why a 1 × 1 table for info boxes.** Word does support paragraph shading and borders, but a table cell reproduces the "coloured bar plus tinted panel" look far more reliably, survives round-tripping through LibreOffice and Google Docs, and keeps the block together across a page break via `cantSplit`. The trade-off is that a table is slightly more awkward for a user who then wants to edit the text in Word — acceptable, and the same substitute is used in the clipboard HTML (§14.2), which keeps the two outputs consistent.
+
+### 14.3 Language metadata
+
+Two distinct things, both required:
+
+1. **Run-level `language: { value: "da-DK" }`** on every `TextRun`. This is what actually drives Word's proofing tools; without it a Danish document gets red-underlined by an English dictionary, which looks broken to the recipient.
+2. **Core properties** — `title`, `subject`, `creator`, `description`, `keywords` — set from `DocumentMeta` and the document language.
+
+Set `"da-DK"` or `"en-GB"` from `docLang`. Verify in a real Word install as part of the export test matrix (§20.4); this is the kind of detail that silently regresses.
+
+### 14.4 The logo
+
+**Recommendation: a build-time high-resolution PNG generated from the supplied SVG, with the supplied PNG as the committed fallback.**
+
+| Option | Assessment |
+| --- | --- |
+| Rasterise SVG in-browser at export time | Canvas + `XMLSerializer` works, but adds runtime cost, risks canvas tainting, and produces different results across browsers. Rejected |
+| Embed the SVG directly in DOCX | Word 2016+ supports it via the `svgBlip` extension, but **requires an embedded PNG fallback anyway**, and LibreOffice and Google Docs handle it poorly. Rejected as the primary |
+| Use the supplied PNG as-is | Zero work, but its resolution is unknown; at 32 mm placed width, sharp print needs ≈ 378 px at 300 ppi |
+| **Build-time PNG from the SVG** | Deterministic, generated once by `@resvg/resvg-js` in a build script, no runtime cost, renders correctly in every consumer. **Recommended** |
+
+The build script emits `ishoej-kreds18@300.png` at exactly the pixel width implied by 32 mm at 300 ppi, preserving the SVG's aspect ratio. `ImageRun` receives explicitly computed `width`/`height` derived from that same ratio, so distortion is impossible by construction.
+
+### 14.5 Fonts in DOCX
+
+**Georgia for headings, Calibri for body**, mapped explicitly from the screen typography:
+
+| Screen / PDF | DOCX | Reason |
+| --- | --- | --- |
+| Source Serif 4 | Georgia | Both transitional serifs with large x-height; Georgia is present on effectively every Windows and macOS install |
+| Source Sans 3 | Calibri | Both humanist sans; Calibri is the Word default recipients already have |
+
+**The reasoning, plainly:** a DOCX names a font, it does not carry one. Specifying "Source Sans 3" means Word substitutes on almost every recipient's machine, and Word's substitution is metric-driven and unpredictable — line counts shift, page breaks move. Choosing fonts the recipient already has produces a document that looks intentional everywhere, at the cost of not matching the PDF exactly. Font embedding (`w:embedRegular`) exists but brings licence-flag complexity, a much larger file, and patchy support outside Word. Not a v1 bet.
+
+### 14.6 Stated plainly
+
+**Word and browsers use different layout engines. The PDF and the DOCX will not be pixel-identical, and this is expected rather than a defect.** Line breaks will fall differently, page breaks may land a paragraph earlier or later, and the DOCX uses substitute fonts by design (§14.5). What *is* guaranteed to match: the content, its order, the heading hierarchy, the labels in the correct document language, the logo, the margins, the page size, and the semantic distinction between every block type.
+
+This sentence belongs in `/hjaelp` in both languages, not just in this plan. A user who is told beforehand is not disappointed.
+
+---
+
+## 15. Clipboard strategy
+
+### 15.1 Mechanism
+
+```ts
+// Blobs are constructed synchronously — Safari rejects ClipboardItem contents
+// produced by an await that resolves after the user gesture.
+const html = new Blob([renderClipboardHtml(doc, labels)], { type: "text/html" });
+const text = new Blob([renderPlainText(doc, labels)], { type: "text/plain" });
+await navigator.clipboard.write([new ClipboardItem({ "text/html": html, "text/plain": text })]);
+```
+
+Three-tier fallback:
+
+1. `navigator.clipboard.write` with both MIME types — the target path.
+2. `document.execCommand("copy")` over a hidden, selected `contenteditable` holding the HTML — loses guaranteed plain-text control but works where `ClipboardItem` is blocked.
+3. A dialog showing the rendered document with everything pre-selected and the instruction **"Tryk Ctrl+C for at kopiere"** / *"Press Ctrl+C to copy"*.
+
+Tier 3 matters more than it looks: it is the path for insecure contexts (`http://` on a LAN), for locked-down school-managed browsers, and for anyone whose clipboard permission is denied. A copy button that simply fails is worse than no copy button.
+
+### 15.2 What the clipboard HTML must look like
+
+- **Every style inline.** No `<style>` block, no classes — Gmail and Outlook strip both.
+- **`<table>` for info boxes**, matching the DOCX approach (§14.2). Paragraph background colours are dropped by Google Docs; table cell shading survives nearly everywhere.
+- **Semantic elements** — `h1`, `h2`, `p`, `ul`, `ol`, `li`, `a`, `strong`, `em`. These are what every target maps onto its own styles.
+- **No logo.** An `<img>` needs either an absolute URL (a network request from the recipient's mail client, which many block) or a base64 data URI (which Outlook strips and Gmail truncates). Omitting it is the honest choice, and §5.5 tells the user so.
+- **Points, not pixels**, for font sizes — Word interprets `pt` predictably.
+- **`<meta charset="utf-8">`** in the fragment and `;charset=utf-8` on the blob type, so `æøå` survive.
+
+### 15.3 Realistic paste results
+
+| Target | Headings | Lists | Links | Info boxes | Colours | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Microsoft Word** | Yes | Yes, nesting preserved | Yes, clickable | Yes, as tables with shading | Yes | Best fidelity. Word maps `h1`/`h2` onto its own heading styles, so the recipient's template may restyle them — acceptable and often desirable |
+| **Outlook (desktop)** | Yes | Yes | Yes | Yes | Yes | Uses the Word rendering engine. Very close to the Word result |
+| **Outlook (web)** | Yes | Yes | Yes | Mostly — some border loss | Mostly | Sanitiser is more aggressive; left bars may thin |
+| **Gmail** | Yes | Yes | Yes | Yes, table shading survives | Yes | Strips `position` and `float`; our layout uses neither |
+| **Google Docs** | Yes | Yes | Yes | **Partly** — cell shading survives, cell borders are unreliable | Text colour yes, paragraph background no | The specific reason info boxes are tables and not styled paragraphs |
+| **Plain-text field** | As `## HEADING` | As `- item` / `1. item` | `Label (https://…)` | As `[VIGTIGT] …` | N/A | See §15.4 |
+| **Slack / Teams** | Partial | Yes | Yes | No | No | Both convert to their own limited markup. Plain text is the practical result |
+
+### 15.4 The plain-text fallback
+
+Not a stripped-tags dump — a deliberately readable Markdown-ish serialisation, and the same format the raw-text mode uses (§7.5), so the two round-trip:
+
+```
+KLUBMØDE AUGUST
+Referat fra mødet
+fredag den 14. august 2026 · kl. 15.30–17.00 · Lærerværelset
+
+Kære kolleger. Her er et kort referat fra klubmødet.
+
+## DAGSORDEN
+1. Godkendelse af referat
+2. Nyt fra kredsen
+
+## BESLUTNINGER
+- Klubben bakker op om forslaget.
+
+## HANDLINGER
+- Indkalde til møde om arbejdstid — Mette, frist 01.09.2026
+
+[VIGTIGT] Frist for tilmelding er 20. august.
+
+## KONTAKT
+Mette Hansen · mette@ishoejlaererkreds.dk
+
+Med venlig hilsen
+Ishøj Lærerkreds · Kreds 18 · DLF
+```
+
+Labels follow the document language. Line width is not hard-wrapped — wrapping fights every target that reflows.
+
+### 15.5 Status copy
+
+| State | Danish | English |
+| --- | --- | --- |
+| Idle | Kopiér nyhedsbrev | Copy newsletter |
+| Success | Kopieret | Copied |
+| Failure | Kunne ikke kopiere | Could not copy |
+| Fallback | Tryk Ctrl+C for at kopiere | Press Ctrl+C to copy |
+
+Success is announced in a polite live region and shown with a checkmark **and** the word — never a colour change alone. The state reverts after 4 seconds.
+
+### 15.6 Browser constraints
+
+- **Secure context required.** `navigator.clipboard` is unavailable on plain `http://` except `localhost`. The static host must be HTTPS.
+- **User gesture required** in every browser. The write happens in the click handler, never after an `await` that could break the gesture chain.
+- **Safari** requires blob construction to be synchronous within the gesture, or the `ClipboardItem` to receive a `Promise` directly in its constructor. Building blobs synchronously satisfies both.
+- **Firefox** has supported `ClipboardItem` with `text/html` since v127; older builds fall through to tier 2.
+- **`text/html` only.** Custom MIME types (`web application/x-…`) are not portable and buy us nothing.
+
+---
+
+## 16. Local storage and privacy
+
+### 16.1 Comparison
+
+| | localStorage | IndexedDB (`idb-keyval`) |
+| --- | --- | --- |
+| API | Synchronous, trivial | Async, 4 functions via `idb-keyval` (~1.1 KB) |
+| Quota | ~5 MB per origin | Large; browser-managed |
+| Blocks the main thread | Yes | No |
+| Structured data | Strings only — manual JSON | Structured clone |
+| Right for | Small values needed synchronously at boot | Documents, autosave, many drafts |
+
+### 16.2 Recommendation
+
+**Preferences in localStorage via `@nanostores/persistent`; documents in IndexedDB via `idb-keyval`.**
+
+Two mechanisms, each with one non-overlapping reason:
+
+- **Preferences must resolve synchronously at boot.** `uiLang` decides what the first paint says. An async read means a flash of the wrong language on every load — precisely the failure §9.3 is engineered to avoid. localStorage is the only synchronous option.
+- **Documents must not block the main thread.** Autosave fires on a 600 ms debounce while the user types. A 60 KB synchronous `JSON.stringify` + `localStorage.setItem` on every pause is a visible stutter, and 20 drafts would crowd the 5 MB cap.
+
+Considered and rejected: **localStorage for everything.** Simpler on the surface, but it trades a real correctness property (no jank, no quota ceiling) for the removal of a 1.1 KB dependency.
+
+### 16.3 What is stored
+
+| Key | Store | Contents |
+| --- | --- | --- |
+| `nl.uiLang` | localStorage | `"da"` \| `"en"` |
+| `nl.docLang` | localStorage | Default document language for new documents |
+| `nl.settings` | localStorage | Organisation name, footer line, preview zoom, dismissed hints |
+| `nl.current` | IndexedDB | The autosaved working document |
+| `nl.draft.<uuid>` | IndexedDB | Named drafts |
+| `nl.draftIndex` | IndexedDB | `{ id, name, updatedAt }[]` for the drafts panel |
+
+Every document value is validated with a Zod schema on read. A draft written by an older release either migrates through the `schemaVersion` chain or surfaces a recoverable error — it never crashes the workspace or silently loses content.
+
+### 16.4 Privacy posture
+
+Version 1 guarantees, and each is testable:
+
+1. **No document content leaves the browser.** No backend, no adapter, no API route, no `fetch` to any origin. Enforced by a CSP `connect-src 'self'` and asserted by a Playwright test that fails on any outbound request during a full paste-edit-export cycle.
+2. **No analytics, no third-party tracking, no external AI.** No Google Fonts (self-hosted), no CDN, no tag manager, no error reporting service.
+3. **Drafts live in the browser**, stated in three places: the entry screen, the export bar, and the drafts panel — not hidden in a privacy page nobody opens.
+4. **The user can delete everything.** "Slet alle gemte data" / *"Delete all stored data"* clears both stores and reloads. One click, one confirmation, no residue.
+5. **No claim of encryption.** The privacy page says so directly:
+
+   > **Dansk:** Kladder gemmes i din browser på denne computer. De er ikke krypterede, og de er ikke egnede til stærkt fortrolige oplysninger. Andre med adgang til computeren og denne browserprofil kan læse dem. Brug ikke værktøjet til personsager eller helbredsoplysninger.
+   >
+   > **English:** Drafts are stored in your browser on this computer. They are not encrypted and are not suitable for highly confidential information. Anyone with access to this computer and this browser profile can read them. Do not use this tool for individual member cases or health information.
+
+   The second sentence of each is the one that matters. Union material can include disciplinary and health matters, and a calm, specific warning is more useful than a generic disclaimer.
+
+6. **A `/privatliv` page with zero JavaScript**, in Danish and English, covering what is stored, where, for how long, how to delete it, and what the tool never does.
+
+### 16.5 Storage eviction — a real limitation
+
+**Safari's Intelligent Tracking Prevention deletes all script-writable storage after 7 days without user interaction with the site.** This affects localStorage *and* IndexedDB. A user who writes a draft in Safari and returns three weeks later will find it gone.
+
+Mitigations, in order:
+
+1. **"Hent alle kladder som fil"** / *"Download all drafts as a file"* — a JSON export, and the matching import. This is the only durable backup and is a v1 requirement, not an extra.
+2. A one-time notice in Safari: **"Din browser sletter gemte kladder efter 7 dage uden brug. Hent en sikkerhedskopi, hvis du vil gemme dem længere."** / *"Your browser deletes saved drafts after 7 days of inactivity. Download a backup if you want to keep them longer."*
+3. `navigator.storage.persist()` requested once, which can exempt the origin — but it is granted at the browser's discretion and must not be relied upon.
+
+Also worth knowing: private/incognito windows discard everything on close, and some school-managed browsers clear site data on sign-out. The same file export covers all of these.
+
+---
+
+## 17. Accessibility
+
+Target: **WCAG 2.2 AA**.
+
+### 17.1 Structure and semantics
+
+- One `h1` per document (the newsletter title); sections are `h2`, sub-sections `h3`. Levels are never skipped — guaranteed by the model (§10.3), not by discipline.
+- Landmarks: `header`, `main`, `nav` (drafts), `footer`; the preview is `role="region"` with `aria-label` **"Forhåndsvisning af nyhedsbrevet"** / *"Newsletter preview"*.
+- Section cards are `<article>` with `aria-labelledby` pointing at their heading input.
+- Lists are real `ul`/`ol`. Tables are used only in DOCX and clipboard output, never in the app UI.
+- The editor surface carries `role="textbox"`, `aria-multiline="true"` and an `aria-label` in the interface language.
+
+### 17.2 Keyboard
+
+Every function reachable and operable by keyboard, with no traps:
+
+| Action | Keys |
+| --- | --- |
+| Move between sections | `Tab` / `Shift+Tab` |
+| Reorder a section | Focus the card, then `Alt+↑` / `Alt+↓` — **and** the visible `[↑]` `[↓]` buttons |
+| Editor formatting | `Ctrl/⌘+B`, `Ctrl/⌘+I`, `Ctrl/⌘+K` (link) |
+| Undo / redo | `Ctrl/⌘+Z`, `Ctrl/⌘+Shift+Z` |
+| Exit the editor | `Escape` returns focus to the section card |
+| Skip to preview | A skip link, first in tab order |
+| Close dialogs | `Escape`; focus returns to the trigger |
+
+**Reordering has no drag-only path.** Drag-and-drop may be added as an enhancement, but the buttons and the keyboard shortcut are the primary mechanism — which also happens to be faster for everyone.
+
+### 17.3 Focus
+
+- Visible on every interactive element, using `--focus-ring` (§12.6): 2 px, 3.4:1 against the adjacent colour, with a white inner ring so it survives tinted backgrounds. Meets SC 2.4.11 *Focus Not Obscured* and SC 2.4.13 *Focus Appearance*.
+- Never removed without replacement. `:focus-visible` for pointer users, `:focus` fallback.
+- Dialogs trap focus while open and restore it on close.
+- After the parse transition, focus moves to the review strip so keyboard and screen-reader users are not stranded at the top of a changed page.
+
+### 17.4 Colour and contrast
+
+- Body text 15.46:1, headings 12.76:1, muted text 7.85:1, links 8.19:1 — all far above the 4.5:1 requirement.
+- Gold is never text (§12.4).
+- No information conveyed by colour alone: every semantic block has a text label and a distinct bar treatment; low-confidence blocks show the word **Usikker** / *Uncertain*; save status shows text, not a coloured dot.
+- Checked at 200% zoom and at 320 px width (SC 1.4.10 *Reflow*).
+
+### 17.5 Language attributes
+
+- `<html lang>` matches the interface language and updates on switch.
+- The **preview root carries `lang={docLang}`**, so a Danish document in an English interface is announced in Danish. This is the accessibility payoff of separating the two axes, and it is the specific case to include in the screen-reader test pass.
+- The language switch buttons carry `lang` and `hreflang` for their own language, so "English" is pronounced in English even inside a Danish page.
+
+### 17.6 Announcements
+
+- One polite live region for status: saved, copied, export started, export finished, parse complete.
+- One assertive region for errors only.
+- Language change announced in the **new** language, after `<html lang>` has updated (§9.3).
+- Export progress announced at start and end, never on a timer.
+- `prefers-reduced-motion: reduce` removes the parse transition, preview scroll-sync animation and all non-essential motion; nothing depends on animation to be understood.
+
+### 17.7 Forms and errors
+
+- Every input has a visible `<label>` with `for` — never a placeholder as the only label.
+- Errors are associated via `aria-describedby`, appear next to the field, and describe the fix: **"Datoen skal se ud som 14.08.2026"** / *"The date must look like 14/08/2026"* — not "Invalid input".
+- Required fields are marked in text, not with a bare asterisk.
+- Nothing auto-submits or auto-navigates on input.
+
+### 17.8 Verification
+
+`axe-core` via Playwright on every screen and every dialog, in both interface languages, as part of CI. Automated scanning catches perhaps half of real issues, so it is paired with a manual pass: keyboard-only walkthrough of the full flow, and a screen-reader pass (NVDA on Windows, VoiceOver on macOS) covering the language switch, the review strip and the export status.
+
+---
+
+## 18. Component inventory
+
+### 18.1 Astro
+
+| Component | Purpose | JS |
+| --- | --- | --- |
+| `layouts/Base.astro` | `<html lang>`, meta, fonts, CSP | None |
+| `layouts/Static.astro` | Help / privacy / about shell | None |
+| `components/SiteHeader.astro` | Logo, title, static language links | None |
+| `components/SiteFooter.astro` | Organisation line, privacy link | None |
+| `pages/index.astro` | Danish workspace | Island |
+| `pages/en/index.astro` | English workspace | Island |
+| `pages/{hjaelp,privatliv,om}.astro` + `/en/*` | Static content | None |
+
+### 18.2 Svelte island
+
+```
+Workspace.svelte                  root; owns DocumentStore, layout mode
+├── AppHeader.svelte
+│   ├── LanguageSwitch.svelte     interface language, segmented, a11y-complete
+│   └── DraftsMenu.svelte
+├── EntryScreen.svelte            paste target, resume-draft row
+├── ReviewStrip.svelte            parse summary, low-confidence walker
+├── EditorPane.svelte
+│   ├── DocumentHeaderCard.svelte title, subtitle, date, time, location, docLang
+│   ├── SectionCard.svelte        wrapper: heading, reorder, type menu, delete
+│   │   ├── RichTextEditor.svelte TipTap mount; lazy on first focus
+│   │   ├── EditorToolbar.svelte  bold, italic, link, lists, clear, undo/redo
+│   │   ├── AgendaEditor.svelte
+│   │   ├── ActionItemsEditor.svelte
+│   │   ├── ContactEditor.svelte
+│   │   └── NoticeEditor.svelte
+│   ├── AddSectionMenu.svelte
+│   └── RawTextView.svelte        the third view (§7.5)
+├── PreviewPane.svelte
+│   ├── PagedPreview.svelte       Paged.js in an isolated subtree
+│   ├── PageIndicator.svelte
+│   └── ZoomControl.svelte
+├── ExportBar.svelte
+│   ├── PdfButton.svelte
+│   ├── DocxButton.svelte
+│   ├── CopyButton.svelte
+│   └── SaveStatus.svelte
+├── DraftsPanel.svelte            list, rename, delete, file export/import
+├── PrivacyNotice.svelte
+└── ui/  Button · Dialog · Select · Tabs · Toast · Tooltip · LiveRegion · VisuallyHidden
+```
+
+Eight primitives in `ui/`, hand-written. This is the concrete reason `shadcn-svelte` + `unocss-preset-shadcn` is not worth its wiring here (§2): the bridge costs more than the components it would deliver.
+
+### 18.3 Non-visual modules
+
+```
+model/      types.ts · factory.ts · migrate.ts · schema.ts (Zod)
+parser/     index.ts · normalise.ts · segment.ts · classify.ts · assemble.ts
+            enrich.ts · repair.ts · report.ts · rules/{da,en}.ts
+render/     html.ts · plaintext.ts · tiptap.ts (RichText ⇄ TipTap JSON)
+export/     pdf.ts · docx.ts · clipboard.ts · filename.ts
+i18n/       types.ts · da.ts · en.ts · index.ts · format.ts
+labels/     types.ts · da.ts · en.ts
+storage/    prefs.ts · documents.ts · backup.ts
+stores/     document.svelte.ts · lang.ts · status.ts
+```
+
+---
+
+## 19. Project and folder structure
+
+### 19.1 Layout
+
+```
+newsletter/
+├─ astro.config.mjs           output: "static", i18n, UnoCSS, Svelte
+├─ uno.config.ts              presetWind4 + design tokens (§12.10)
+├─ bunfig.toml                linker, test config
+├─ biome.json                 TS/JS/JSON/CSS
+├─ .prettierrc                .astro/.svelte/.md only
+├─ prek.toml                  git hooks (§19.2)
+├─ tsconfig.json              astro/tsconfigs/strict
+├─ package.json
+├─ docs/
+│  └─ PLAN.md
+├─ public/
+│  └─ brand/                  ishoej-kreds18.{svg,png} + generated @300.png
+├─ scripts/
+│  └─ build-logo-png.ts       @resvg/resvg-js, run in prebuild (§14.4)
+├─ src/
+│  ├─ pages/                  index.astro · hjaelp · privatliv · om · en/*
+│  ├─ layouts/                Base.astro · Static.astro
+│  ├─ components/             SiteHeader.astro · SiteFooter.astro
+│  ├─ islands/                Workspace.svelte + the tree in §18.2
+│  ├─ lib/                    model · parser · render · export · i18n
+│  │                          labels · storage · stores
+│  └─ styles/                 tokens.css · print.css · document.css
+└─ tests/
+   ├─ unit/                   mirrors src/lib
+   ├─ fixtures/               real Danish meeting notes + expected NewsletterDoc
+   └─ e2e/                    Playwright
+```
+
+`src/styles/print.css` is deliberately a plain CSS file, not utility classes: `@page`, break control and print colour adjustment are rules UnoCSS has no reason to generate, and keeping them in one readable file makes the print behaviour auditable.
+
+### 19.2 Tooling and hooks
+
+Per the house rules: **Bun** is the runtime, installer, script runner and test runner; **Biome** owns TS/JS/JSON/CSS; **Prettier** with `prettier-plugin-astro` and `prettier-plugin-svelte` owns template markup, because Biome 2.5's parsing of `.astro` and `.svelte` templates is still maturing.
+
+`prek.toml` is already committed and wires this up. Beyond ordinary hygiene it encodes the stack's anti-patterns as commit-time failures — Bun-only tooling, Svelte 5 runes only, `presetWind4` only, no removed `Astro.glob()`, `client:only` must name its framework, and no runtime-assembled UnoCSS class names. `fix-byte-order-marker` is included specifically because a BOM corrupts the `æøå` handling this project depends on.
+
+`prek install` runs as part of Milestone 1, once `package.json` exists — the local hooks (`biome`, `prettier`, `bun run check`, `bun test`) need it. Until then the config is inert.
+
+Scripts the hooks depend on:
+
+```jsonc
+{
+  "scripts": {
+    "dev": "astro dev",
+    "build": "bun run scripts/build-logo-png.ts && astro build",
+    "check": "astro check && svelte-check --tsconfig ./tsconfig.json",
+    "test": "bun test",
+    "test:e2e": "playwright test"
+  }
+}
+```
+
+---
+
+## 20. Testing strategy
+
+### 20.1 Unit — `bun test`
+
+| Area | What is asserted |
+| --- | --- |
+| **Parser** | A fixture corpus of real Danish meeting notes, each with an expected `NewsletterDoc`. Every rule has a focused test. Adversarial inputs: empty, one word, 50 pages, no line breaks, all caps, mixed Danish/English, decomposed `å`, Windows CRLF, smart quotes, tab-indented lists |
+| **Date/time recognition** | Every format in §11.3, plus rejection cases (`14/8` inside a URL, `1.1` as a numbering prefix) |
+| **Model** | Migration chain across schema versions; Zod rejects malformed drafts |
+| **Converters** | `RichText ⇄ TipTapJSON` round-trip identity, property-tested over generated inline structures |
+| **i18n** | Key parity `da` ↔ `en`; no empty strings; no untranslated placeholders; every `{var}` in a Danish string exists in its English counterpart; unknown key falls back to Danish |
+| **Formatting** | The exact `Intl` outputs in §8.6, pinned as assertions |
+| **Renderers** | HTML and plain-text snapshots per block type, in both document languages |
+| **Clipboard HTML** | All styles inline, no `<style>`, no classes, `charset` present, info boxes are tables |
+| **DOCX** | Unzip the generated blob with `jszip` and assert against `word/document.xml`: correct labels, `w:lang` = `da-DK`/`en-GB`, numbering definitions present, header/footer present, `æøå` intact |
+
+The DOCX test is worth highlighting: unzipping the blob and asserting on the XML turns "the export works" from a manual claim into a CI gate, with no Word install required.
+
+### 20.2 End-to-end — Playwright
+
+**Core flow:** paste Danish notes → format → verify section count and types → edit a heading → reorder a section → verify the preview updates → export.
+
+**Localisation** (mirrors §24.2 one-for-one):
+
+1. First run with `navigator.language = "en-US"` still opens in Danish.
+2. Switch to English; all visible strings change.
+3. Reload; English persists; URL is `/en/`.
+4. Switch language with content present; deep-equal the document's content nodes before and after.
+5. Set interface English + document Danish; preview labels stay Danish, chrome is English.
+6. Switch document language; preview labels and the rendered date both change.
+7. Danish `14.08.2026` / `15.30` vs English `14/08/2026` / `15:30`.
+8. Export PDF and DOCX in each document language; assert generated labels.
+9. Crawl every control, dialog and status in both languages; fail on any string absent from the catalog.
+10. Type `Ø Æ Å æ ø å` and assert it survives editor → preview → clipboard → DOCX.
+11. Operate the language switch by keyboard alone; assert `aria-pressed` and the live-region announcement.
+
+**Export:**
+
+- `page.emulateMedia({ media: "print" })`, then assert page count, that no `h2` is the last element on a page, that a list spans a break with continuing numbering, and that the footer shows the right page number.
+- DOCX: capture the download, unzip, assert structure.
+- Clipboard: `context.grantPermissions(["clipboard-read", "clipboard-write"])` (Chromium), read back both flavours, assert both.
+
+**Privacy:** intercept all network traffic during a full paste-edit-export cycle; **fail on any request beyond the app's own static assets.**
+
+**Accessibility:** `axe-core` on every screen and dialog, both languages; keyboard-only traversal of the full flow.
+
+### 20.3 Visual regression
+
+Screenshot the A4 preview at a fixed viewport for a set of canonical documents: one page, three pages, long Danish compound words, a very long link, an agenda spanning a page break, every block type on one page. Both document languages. These catch template drift that no assertion would.
+
+### 20.4 Manual matrix
+
+Automated tests cannot verify what Word does with a DOCX. Once per milestone, on a real install:
+
+| Check | Word (Win) | Word (macOS) | LibreOffice | Google Docs |
+| --- | --- | --- | --- | --- |
+| Opens without a repair prompt | ✓ | ✓ | ✓ | ✓ |
+| Header logo and footer page number correct | ✓ | ✓ | ✓ | ✓ |
+| Info boxes render with fill and bar | ✓ | ✓ | ✓ | partial |
+| Danish proofing language active | ✓ | ✓ | ✓ | n/a |
+| `æøå` correct throughout | ✓ | ✓ | ✓ | ✓ |
+
+Plus a paste pass into Word, Outlook desktop, Outlook web, Gmail and Google Docs against the table in §15.3 — that table is a claim, and it must be checked rather than assumed.
+
+---
+
+## 21. Browser compatibility
+
+Target: current Chrome, Edge, Firefox, Safari — desktop and mobile.
+
+| Feature | Chrome / Edge | Firefox | Safari | Mitigation |
+| --- | --- | --- | --- | --- |
+| `ClipboardItem` + `text/html` | Yes | Yes (127+) | Yes | Three-tier fallback (§15.1) |
+| Clipboard on `http://` | No | No | No | HTTPS required |
+| `window.print()` | Yes | Yes | Yes | — |
+| `@page` margin boxes | **No** | **No** | **No** | Paged.js |
+| `orphans` / `widows` | Yes | **No** | Yes | Paged.js |
+| `break-after: avoid` | Yes | Partial | Yes | Paged.js |
+| Print background colours | Needs `print-color-adjust` | Needs it | Needs it | Set on every tinted block |
+| Save as PDF from print | Yes | Yes | Yes (in a dropdown) | Helper copy points at it |
+| iOS print | Awkward — share sheet | n/a | Awkward | Documented; DOCX/clipboard preferred |
+| Variable fonts | Yes | Yes | Yes | Static fallback in the `@font-face` stack |
+| `font-display` | Yes | Yes | Yes | `block` for the preview surface |
+| IndexedDB | Yes | Yes | Yes, **7-day eviction** | File export/import (§16.5) |
+| localStorage | Yes | Yes | Yes, same eviction | Same |
+| `navigator.storage.persist()` | Yes | Yes | Partial | Best-effort only |
+| Blob download | Yes | Yes | Yes | — |
+| `Intl.DateTimeFormat` da-DK | Yes | Yes | Yes | — |
+| `Intl.PluralRules` / `ListFormat` | Yes | Yes | Yes | — |
+| `String.prototype.normalize` | Yes | Yes | Yes | — |
+| `crypto.randomUUID` | Yes | Yes | Yes (secure ctx) | HTTPS required anyway |
+| `structuredClone` | Yes | Yes | Yes | — |
+| `prefers-reduced-motion` | Yes | Yes | Yes | — |
+
+**Not supported:** Internet Explorer, and any browser without `ClipboardItem` gets the tier-3 manual copy dialog rather than a broken button.
+
+---
+
+## 22. Risks, limitations and mitigations
+
+| # | Risk | Likelihood | Impact | Mitigation |
+| --- | --- | --- | --- | --- |
+| 1 | **Paged.js is stale** — 0.4.3, last npm publish 2023 | Medium | High | The native print-CSS fallback is mandatory and always present, so a Paged.js failure degrades page numbering rather than breaking export. Pin the version, vendor it if the project goes dark, and keep the abstraction behind `export/pdf.ts` so replacement touches one file |
+| 2 | **Logo files absent** (§0) | Certain today | Blocks visual sign-off | Drop-in contract in §12.8; provisional palette anchored on DLF's verified navy; one task closes it |
+| 3 | **Parser precision on messy input** | High | Medium | Confidence marking and the review strip (§3.4) make imprecision visible rather than silent; the raw-text view (§7.5) is the escape hatch; a growing fixture corpus turns each field report into a regression test |
+| 4 | **Safari 7-day storage eviction** | Certain in Safari | High | File export/import as a v1 requirement, a Safari-specific notice, and `storage.persist()` as best effort (§16.5) |
+| 5 | **PDF is a print dialog, not a download** | Certain | Medium | Honest labelling (§13.5). Revisit with a real generator in v2 |
+| 6 | **DOCX will not match the PDF** | Certain | Low | Stated in the plan, in `/hjaelp`, and in both languages (§14.6) |
+| 7 | **Multiple TipTap instances on a long document** | Medium | Medium | Lazy mount on first focus; unfocused sections render as static HTML. Measure at 30 sections |
+| 8 | **Live pagination janks while typing** | Medium | Medium | Paged.js runs debounced on a detached clone, never on the editable DOM (§13.2) |
+| 9 | **English text overflowing Danish-sized UI** | Medium | Low | No fixed-width buttons; a Playwright pass at 320 px in both languages; longest-string cases in the fixture set |
+| 10 | **Decomposed `æøå` from macOS paste** | Medium | High if unhandled | NFC normalisation at every ingress point, with a unit test (§8.7) |
+| 11 | **Scope creep toward a Word clone** | Medium | High | The block-type menu (§5.4) is the contract; adding a type is a design decision, not a feature request |
+| 12 | **A future contributor uses gold for text** | Medium | Medium | Stated as a rule in §12.4, checked in code review, and covered by the contrast assertions in the token tests |
+| 13 | **Sensitive union content in an unencrypted store** | Medium | High | Explicit, specific warning naming member cases and health information (§16.4); no cloud path exists to leak to |
+
+---
+
+## 23. Implementation plan
+
+Each milestone ends with something that works. Nothing is left half-built between them.
+
+### Milestone 1 — Foundation *(~2 days)*
+
+Scaffold Bun + Astro 7 static + Svelte 5 + UnoCSS with `presetWind4`. `tsconfig` on `astro/tsconfigs/strict`. Biome + Prettier split per §19.2. **`prek install`** — the hooks become live here. Astro i18n routing with `da` unprefixed. The four routes render.
+
+*Done when:* `bun run dev` serves `/` and `/en/`, `bun run check` and `bun test` pass, and `prek run --all-files` is clean.
+
+### Milestone 2 — Model and localisation *(~3 days)*
+
+`model/types.ts`, factory, Zod schema, migration scaffold. `i18n/` with both catalogs, `t()`, `format.ts`. `labels/` with both packs. `$uiLang` and `$docLang` stores with persistence.
+
+*Done when:* the language switch works with persistence, `Intl` assertions match §8.6, and the key-parity test passes.
+
+### Milestone 3 — Parser *(~5 days)*
+
+The eight-stage pipeline, the Danish rule pack, then the English one. `ParseReport` with confidence. The fixture corpus starts here and grows for the rest of the project.
+
+*Done when:* every fixture parses to its expected document and every rule has a test.
+
+### Milestone 4 — Editor and preview *(~6 days)*
+
+Entry screen. Section cards with reorder, type menu, delete. TipTap mounted per section with the restricted schema and lazy mount. Metadata editors. Static HTML preview — **not yet paginated**. Autosave to IndexedDB.
+
+*Done when:* paste → format → edit → autosave → reload → content intact, entirely by keyboard.
+
+### Milestone 5 — Visual design *(~4 days)*
+
+Tokens into `uno.config.ts` and `tokens.css`. Fonts self-hosted. Full A4 document stylesheet, every block type. Logo integrated — **requires the files from §0**. Responsive split/tabs.
+
+*Done when:* the preview matches §12.7 at every breakpoint and the contrast table is verified in code.
+
+### Milestone 6 — Export *(~5 days)*
+
+Paged.js pagination for preview and print, with the fallback path. `print.css`. DOCX builder with the full mapping, headers, footers, numbering, `w:lang`. The build-time logo PNG script. Clipboard with all three tiers.
+
+*Done when:* a three-page newsletter exports to PDF and DOCX in both document languages, opens correctly in Word, and pastes correctly into Word, Outlook and Gmail.
+
+### Milestone 7 — Drafts, privacy, accessibility *(~3 days)*
+
+Named drafts, rename, delete, delete-all. File export/import. Safari eviction notice. Static help/privacy/about pages in both languages. Full accessibility pass: focus, live regions, `axe-core`, keyboard-only, screen reader.
+
+*Done when:* `axe-core` is clean on every screen in both languages and the manual passes are signed off.
+
+### Milestone 8 — Hardening *(~3 days)*
+
+Adversarial parser inputs. Long-document performance. Cross-browser matrix. Visual regression baselines. The manual Word/Outlook/Gmail matrix. Bundle-size check against the §6.4 budget.
+
+*Done when:* the acceptance criteria in §24 all pass.
+
+**Total: ~31 working days.** Milestones 1–4 produce a usable tool; 5–8 make it shippable.
+
+---
+
+## 24. MVP acceptance criteria
+
+### 24.1 Core
+
+1. The app opens in a browser with no install, no account, no backend.
+2. Pasting Danish meeting notes and pressing one button produces a structured newsletter.
+3. The engine recognises title, subtitle, date, time, location, introduction, headings, sub-headings, paragraphs, agenda, bulleted and numbered lists, decisions, important notices, action items with owner and deadline, quotes, contact details, links, email addresses, closing text and signature.
+4. Every engine decision is correctable by the user.
+5. The live A4 preview reflects edits within 500 ms.
+6. Multi-page documents paginate with correct breaks: no isolated heading at a page bottom, lists continue with correct numbering, page numbers are correct.
+7. PDF export produces a multi-page document with selectable text and a sharp logo.
+8. DOCX export opens in Word without a repair prompt, with headings, lists, links, info boxes, header, footer, logo, margins and A4 page size intact.
+9. Copy writes both `text/html` and `text/plain`; pasting into Word preserves headings, lists, links and info boxes.
+10. Drafts survive a reload and are deletable by the user.
+11. No document content leaves the browser — verified by a network-interception test.
+12. The full flow is operable by keyboard alone.
+13. `axe-core` reports no violations on any screen in either language.
+
+### 24.2 Localisation — required set
+
+1. **The app opens in Danish on first use**, regardless of browser language.
+2. The user can switch the interface to English.
+3. The interface language survives a page reload.
+4. Switching interface language does not change user content.
+5. Interface language and document language are selected independently.
+6. Generated template labels follow the document language.
+7. Danish and English dates use correct locale conventions — `14.08.2026` / `15.30` and `14/08/2026` / `15:30`.
+8. Exported PDF and DOCX use the selected document language for generated labels and metadata.
+9. Every control, validation message, dialog, status and accessibility label exists in Danish and English.
+10. No untranslated keys reach the user — enforced by the compiler (§8.2) and asserted in CI.
+11. Missing translations fall back to Danish.
+12. The UI stays usable when English text runs longer than Danish — verified at 320 px in both languages.
+13. Danish characters render correctly in editor, preview, clipboard, PDF and DOCX.
+14. The language switch is fully keyboard-accessible and screen-reader-friendly, and announces the change in the new language without moving focus.
+
+### 24.3 Explicitly out of scope for v1
+
+Login, cloud sync, real-time collaboration, backend, database, email delivery, CMS, multiple organisations, white-labelling, external AI, automatic translation, template builders, desktop publishing, a Word clone.
+
+---
+
+## 25. Open questions
+
+Ordered by how much the answer changes the work.
+
+| # | Question | Why it matters | Default if unanswered |
+| --- | --- | --- | --- |
+| 1 | **Where are `018-ishoej.svg` and `018-ishoej.png`?** | Blocks Milestone 5. Nothing else is affected | Build against a placeholder with the correct aspect ratio; swap on arrival |
+| 2 | Does Ishøj Lærerkreds have a brand guide with exact colour values and a logo clear-space rule? | The palette is currently derived from DLF's parent identity plus judgement | Use §12.4, re-derive the accent from the SVG |
+| 3 | Should the header and footer be editable, or locked to the kreds identity? | Editable header text weakens visual consistency; locked text blocks reuse by other kredse | Organisation name and footer line editable; logo and layout locked |
+| 4 | Is the tool for **one** kreds, or will other kredse use the same deployment? | Multi-organisation is explicitly out of scope, but it changes whether the logo is a build-time asset or a user upload | One kreds; logo is a build-time asset |
+| 5 | Realistic maximum document length? | Drives the Paged.js performance budget and whether lazy editor mounting is enough | Optimise for 1–8 pages, degrade gracefully to 30 |
+| 6 | Are there existing newsletters to use as parser fixtures and design references? | The single highest-value input available. Real notes beat invented ones for both rule design and visual calibration | Construct representative fixtures and mark them as synthetic |
+| 7 | Is the English interface for actual English-speaking members, or mainly for external sharing? | Changes how much English rule coverage the parser needs | Full English UI, secondary English parser rules |
+| 8 | Should action-item owners come from a small roster the user maintains? | Would improve owner extraction and add a useful autocomplete — but it stores names, which is a privacy consideration | Free text in v1 |
+| 9 | Where will this be hosted, and is HTTPS guaranteed? | Clipboard and `crypto.randomUUID` require a secure context | Assume HTTPS static hosting |
+| 10 | Is Word 2016 or LibreOffice in scope for the manual matrix? | Affects DOCX feature choices, particularly around tables | Word 2019+, LibreOffice 7+, Google Docs |
