@@ -14,9 +14,38 @@ describe("renderInline", () => {
 
   test("escapes text and attributes", () => {
     expect(renderInline([{ kind: "text", text: '<script>&"' }])).toBe("&lt;script&gt;&amp;&quot;");
-    expect(renderInline([{ kind: "link", href: 'javascript:"x', text: "a" }])).toBe(
-      '<a href="javascript:&quot;x">a</a>',
+  });
+
+  test("a quote in a destination cannot open a second attribute", () => {
+    // Unescaped, Chromium parses `href="…" onmouseover="…"` as two attributes,
+    // the second of which is an event handler. Both of these are valid https
+    // destinations, so the protocol check passes them and escaping is what
+    // stops them.
+    expect(
+      renderInline([{ kind: "link", href: 'https://x.dk/a" onmouseover="alert(1)', text: "a" }]),
+    ).toBe('<a href="https://x.dk/a&quot; onmouseover=&quot;alert(1)">a</a>');
+    expect(renderInline([{ kind: "link", href: 'x" onmouseover="alert(1)', text: "a" }])).toBe(
+      '<a href="x&quot; onmouseover=&quot;alert(1)">a</a>',
     );
+  });
+
+  test("only the editor schema's protocols become links", () => {
+    for (const href of ["https://x.dk", "http://x.dk", "mailto:a@x.dk", "tel:+4512345678"]) {
+      expect(renderInline([{ kind: "link", href, text: "a" }])).toBe(`<a href="${href}">a</a>`);
+    }
+    for (const href of [
+      'javascript:"x',
+      "JaVaScRiPt:alert(1)",
+      "  javascript:alert(1)",
+      "java\tscript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:msgbox(1)",
+    ]) {
+      // The mark is dropped, exactly as TipTap drops it — the words stay.
+      expect(renderInline([{ kind: "link", href, text: "a", marks: ["bold"] }])).toBe(
+        "<strong>a</strong>",
+      );
+    }
   });
 
   test("a hard break is a br", () => {

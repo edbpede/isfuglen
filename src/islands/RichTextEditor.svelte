@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Editor } from "@tiptap/core";
   import type { Translator } from "../lib/i18n/index";
-  import type { DocLang, Inline } from "../lib/model/types";
+  import type { DocLang } from "../lib/model/types";
   import { looksStructured } from "../lib/parser/paste";
+  import { renderInline } from "../lib/render/html";
   import { type BodyBlock, blocksToTipTapDoc, tipTapDocToBlocks } from "../lib/render/tiptap";
   import EditorToolbar from "./EditorToolbar.svelte";
 
@@ -46,31 +47,29 @@
   /** A large structured paste waiting for the user's choice (§11.7). */
   let pendingPaste = $state<string | null>(null);
 
-  /** Static render of the unfocused state — the same markup the preview uses. */
+  /**
+   * Static render of the unfocused state — literally the preview's inline
+   * renderer, only the block wrappers differ.
+   *
+   * It is spelled this way because the second copy of that loop was a
+   * cross-site scripting hole: it went into `{@html}` with an unescaped `href`,
+   * so an imported draft or a pasted `[label](https://x"onmouseover=…)` could
+   * add an event handler to this page. `renderInline` escapes the attribute and
+   * applies the very predicate the editor schema is configured with, so there is
+   * nowhere left for the two to drift apart.
+   */
   const staticHtml = $derived(renderStatic(blocks));
 
   function renderStatic(source: BodyBlock[]): string {
     return source
       .map((block) => {
         if (block.type === "paragraph") {
-          return `<p>${block.content.map(runToHtml).join("") || "&nbsp;"}</p>`;
+          return `<p>${renderInline(block.content) || "&nbsp;"}</p>`;
         }
-        const items = block.items
-          .map((item) => `<li>${item.map(runToHtml).join("")}</li>`)
-          .join("");
+        const items = block.items.map((item) => `<li>${renderInline(item)}</li>`).join("");
         return block.ordered ? `<ol>${items}</ol>` : `<ul>${items}</ul>`;
       })
       .join("");
-  }
-
-  function runToHtml(node: Inline): string {
-    if (node.kind === "break") return "<br />";
-    const escaped = node.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    let value = escaped;
-    if (node.marks?.includes("italic")) value = `<em>${value}</em>`;
-    if (node.marks?.includes("bold")) value = `<strong>${value}</strong>`;
-    if (node.kind === "link") value = `<a href="${node.href}">${value}</a>`;
-    return value;
   }
 
   $effect(() => {

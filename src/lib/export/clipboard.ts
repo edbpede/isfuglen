@@ -14,7 +14,7 @@ import type {
   RichText,
   Section,
 } from "../model/types";
-import { escapeAttribute, escapeHtml } from "../render/html";
+import { escapeAttribute, escapeHtml, safeHref } from "../render/html";
 import { renderPlainText } from "../render/plaintext";
 
 /**
@@ -111,7 +111,9 @@ function inline(content: RichText): string {
       if (node.marks?.includes("italic")) value = `<em>${value}</em>`;
       if (node.marks?.includes("bold")) value = `<strong>${value}</strong>`;
       if (node.kind === "link") {
-        return `<a href="${escapeAttribute(node.href)}" style="color:${BRAND_MID};">${value}</a>`;
+        const href = safeHref(node.href);
+        if (href === undefined) return value;
+        return `<a href="${escapeAttribute(href)}" style="color:${BRAND_MID};">${value}</a>`;
       }
       return value;
     })

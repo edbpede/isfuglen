@@ -65,6 +65,14 @@ describe("clipboard HTML", () => {
     expect(escaped).not.toContain("<img src=x");
     expect(escaped).toContain("&lt;img src=x");
   });
+
+  test("a link the editor schema would refuse is pasted as words, not a link", () => {
+    const doc = everyBlockDoc("da");
+    doc.intro = [{ kind: "link", href: "javascript:alert(1)", text: "kredsen" }];
+    const rendered = renderClipboardHtml(doc, labelsFor("da"));
+    expect(rendered).not.toContain("javascript:");
+    expect(rendered).toContain("kredsen");
+  });
 });
 
 describe("payload", () => {

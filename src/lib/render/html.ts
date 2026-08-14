@@ -48,6 +48,42 @@ export function escapeAttribute(value: string): string {
   return escapeHtml(value).replace(/'/g, "&#39;");
 }
 
+/**
+ * The schemes a link may carry — for the HTML renderers here and, through
+ * `isAllowedUri`, for the editor schema and its autolinker too.
+ *
+ * `href` is the one string in the model that nothing validates on the way in.
+ * It arrives from a Markdown-style link in pasted text, from an imported backup
+ * or from a restored draft, and each HTML renderer puts it in an attribute.
+ * Escaping that attribute stops it from closing the quote and adding an event
+ * handler; it does not stop `javascript:`, which needs no punctuation at all.
+ * Both checks belong in one place, so this is it.
+ *
+ * `src/lib/export/docx.ts` is deliberately not a caller: it writes a Word
+ * relationship target, not markup, and `docx` escapes that attribute itself.
+ */
+const LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+/**
+ * The destination to render, or `undefined` when it must not become a link.
+ *
+ * Resolution against a base is what makes the check match the editor: a
+ * relative destination is as harmless as the page it resolves against, while
+ * `javascript:`, `data:` and `vbscript:` keep their own scheme and are refused.
+ * `URL` also normalises the case, leading whitespace and embedded control
+ * characters that a hand-rolled `startsWith` misses. The value returned is the
+ * original, never the resolved one.
+ */
+export function safeHref(href: string): string | undefined {
+  let protocol: string;
+  try {
+    protocol = new URL(href, "https://newsletter.invalid/").protocol;
+  } catch {
+    return undefined;
+  }
+  return LINK_PROTOCOLS.has(protocol) ? href : undefined;
+}
+
 export function renderInline(content: RichText): string {
   return content
     .map((node) => {
@@ -55,7 +91,12 @@ export function renderInline(content: RichText): string {
       const text = escapeHtml(node.text);
       const marked = applyMarks(text, node.marks);
       if (node.kind === "link") {
-        return `<a href="${escapeAttribute(node.href)}">${marked}</a>`;
+        const href = safeHref(node.href);
+        // A destination the editor schema would have refused renders as plain
+        // text. Dropping the anchor is what TipTap does with the mark, so the
+        // preview keeps showing the words the user wrote either way.
+        if (href === undefined) return marked;
+        return `<a href="${escapeAttribute(href)}">${marked}</a>`;
       }
       return marked;
     })

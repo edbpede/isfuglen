@@ -7,6 +7,7 @@ import { BulletList, ListItem, ListKeymap, OrderedList } from "@tiptap/extension
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { Placeholder, UndoRedo } from "@tiptap/extensions";
+import { safeHref } from "../render/html";
 
 /**
  * The section-body schema — docs/PLAN.md §7.1, §7.4.
@@ -48,9 +49,19 @@ export function sectionBodyExtensions(placeholder: string) {
     Link.configure({
       openOnClick: false,
       autolink: true,
-      // Only schemes a newsletter recipient can act on. `javascript:` and
-      // `data:` are not on the list and are dropped by the schema.
-      protocols: ["http", "https", "mailto", "tel"],
+      /**
+       * Only schemes a newsletter recipient can act on, and the renderer's own
+       * predicate rather than a second copy of the list.
+       *
+       * `protocols` is not the option that does this: TipTap *appends* it to a
+       * built-in set that already carries `ftp`, `callto`, `sms`, `cid` and
+       * `xmpp`, so passing four names there narrows nothing. Only
+       * `isAllowedUri` replaces the check. Sharing `safeHref` with
+       * `renderInline` is what keeps a pasted link from being accepted here and
+       * then silently dropped by the preview beside it — and it is the same
+       * rule `EditorToolbar` already applies to a typed one.
+       */
+      isAllowedUri: (uri) => safeHref(uri) !== undefined,
       HTMLAttributes: { rel: "noopener noreferrer" },
     }),
   ];
