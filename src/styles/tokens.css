@@ -1,0 +1,80 @@
+/**
+ * Design tokens as CSS custom properties — docs/PLAN.md §12.4–§12.6.
+ *
+ * `uno.config.ts` is the source of truth for the palette; this file mirrors it,
+ * because the document and print stylesheets need raw values rather than utility
+ * classes. `tests/unit/styles/tokens.test.ts` asserts the two agree, so a change
+ * in one place without the other fails the build.
+ *
+ * The gold rule, stated once and enforced: --c-accent is 1.88:1 on white. It is
+ * a 3 px rule under the masthead, the fill of an agenda number chip, and the
+ * left bar of an important notice. It is never text, never a meaning-carrying
+ * icon, and never a focus ring.
+ */
+
+:root {
+  /* Core palette */
+  --c-ink: #1a2340;
+  --c-brand: #253154;
+  --c-brand-mid: #3c4e7a;
+  --c-muted: #4a5262;
+  --c-accent: #f2b233;
+  --c-surface: #ffffff;
+  --c-surface-sunken: #f7f8fa;
+  --c-hairline: #dfe3eb;
+
+  /* Semantic block fills. Every one carries ink or brand as its text colour. */
+  --c-info-fill: #e7edf7;
+  --c-info-bar: #3c4e7a;
+  --c-important-fill: #fdf3dd;
+  --c-important-bar: #f2b233;
+  --c-decision-fill: #eaf0e9;
+  --c-decision-bar: #0f5132;
+  --c-action-fill: #fbeae8;
+  --c-action-bar: #b02a1e;
+
+  /* Type */
+  --f-sans: "Source Sans 3 Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-serif: "Source Serif 4 Variable", Georgia, "Times New Roman", serif;
+
+  /* Spacing: a 4 px base, expressed in millimetres on the page so print and
+     screen stay in step. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  --mm-1: 1mm;
+  --mm-2: 2mm;
+  --mm-3: 3mm;
+  --mm-4: 4mm;
+  --mm-5: 6mm;
+  --mm-6: 8mm;
+  --mm-7: 12mm;
+
+  /* Borders, radii, shadows */
+  --bw-hairline: 0.25mm;
+  --bw-bar: 1mm;
+  --bw-brand: 0.8mm;
+  --r-sm: 3px;
+  --r-md: 6px;
+  --shadow-chrome: 0 1px 2px rgb(37 49 84 / 0.06), 0 4px 12px rgb(37 49 84 / 0.08);
+  --shadow-page: 0 2px 8px rgb(37 49 84 / 0.1);
+
+  /* Focus: a geometric addition, never a colour change. 2 px, 3.4:1 against
+     white, with a white inner ring so it survives a tinted background.
+     WCAG 2.2 SC 2.4.11 and SC 2.4.13. */
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px var(--c-brand-mid);
+
+  /* Page geometry */
+  --page-width: 210mm;
+  --page-height: 297mm;
+  --page-margin-y: 18mm;
+  --page-margin-x: 20mm;
+  --page-column: 170mm;
+  --header-band: 22mm;
+  --footer-band: 12mm;
+}

@@ -1,0 +1,122 @@
+/**
+ * Print — docs/PLAN.md §13.3.
+ *
+ * This stylesheet is authored to be correct on its own. Paged.js improves it
+ * with in-content page numbers and cross-browser-uniform widow control, but if
+ * Paged.js fails to load, throws, or exceeds its budget, printing falls back to
+ * exactly these rules and still produces a correct, selectable, sharp multi-page
+ * PDF (§24.1.7). The fallback costs nothing extra because these rules must exist
+ * regardless.
+ */
+
+@page {
+  size: A4 portrait;
+  margin: 18mm 20mm;
+}
+
+@media print {
+  /* The application chrome is not part of the document. */
+  .app-chrome,
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  /* The preview scales itself to fit a pane on screen. On paper it is 1:1, and
+     the page box supplies the margins, so the document sheds its own. */
+  .preview-scaler {
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .preview-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .nl-doc {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  /* Never strand a heading at the bottom of a page. */
+  .nl-h2,
+  .nl-h3,
+  .nl-title,
+  .nl-subtitle,
+  .nl-block-label {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Firefox implements neither `orphans` nor `widows`; these hold in Chrome and
+     Safari, and Paged.js supplies them everywhere when it is available. */
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* A tinted block that splits across a page loses its meaning. */
+  .nl-notice-info,
+  .nl-notice-important,
+  .nl-decisions,
+  .nl-actions,
+  .nl-quote,
+  .nl-contact-row,
+  .nl-agenda-item,
+  .nl-action-item,
+  .nl-decision-item,
+  li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Chrome, Firefox and Safari all drop background fills when printing unless
+     told otherwise. Without this the semantic blocks print as bare text. */
+  .nl-doc,
+  .nl-notice-info,
+  .nl-notice-important,
+  .nl-decisions,
+  .nl-actions,
+  .nl-agenda-item::before {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* `arbejdstidsaftale` and `medarbejderrepræsentant` are ordinary words here.
+     Chrome, Firefox and Safari all ship Danish hyphenation patterns, keyed off
+     the `lang` attribute the preview root carries. */
+  .nl-doc {
+    hyphens: auto;
+  }
+
+  .nl-doc a {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+/**
+ * Paged.js page boxes. `@page` margin boxes are specified in CSS Paged Media but
+ * implemented by no current browser, so `counter(page)` in a running footer only
+ * works on the Paged.js path. The fallback prints without page numbers, which is
+ * the documented degradation.
+ */
+@media print {
+  .pagedjs_page .pagedjs_margin-bottom-right .pagedjs_margin-content::after {
+    content: counter(page) " / " counter(pages);
+    color: #4a5262;
+    font-family: "Source Sans 3 Variable", system-ui, sans-serif;
+    font-size: 8.5pt;
+  }
+}

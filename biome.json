@@ -42,6 +42,26 @@
   },
   "overrides": [
     {
+      "includes": ["**/src/styles/print.css", "**/src/styles/app.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/src/styles/paged.css"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnknownFunction": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/*.astro", "**/*.svelte"],
       "linter": {
         "rules": {
