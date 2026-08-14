@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 84" width="300" height="84" role="img" aria-label="Pladsholder for kredsens logo">
+  <title>Placeholder — Ishøj Lærerkreds, Kreds 18</title>
+  <desc>Not the kreds mark. Drawn entirely from geometry so it rasterises identically on every build machine, and visibly a placeholder so it cannot be mistaken for the real logo. Replace with the supplied 018-ishoej.svg, unmodified. See public/brand/README.md.</desc>
+  <rect x="0" y="0" width="84" height="84" rx="6" fill="#253154"/>
+  <rect x="20" y="22" width="9" height="40" fill="#ffffff"/>
+  <rect x="39" y="22" width="9" height="40" fill="#f2b233"/>
+  <rect x="55" y="22" width="9" height="40" fill="#f2b233"/>
+  <rect x="39" y="38" width="25" height="8" fill="#f2b233"/>
+  <rect x="104" y="26" width="176" height="12" rx="3" fill="#dfe3eb"/>
+  <rect x="104" y="48" width="112" height="8" rx="3" fill="#e9ecf2"/>
+</svg>

@@ -1,0 +1,1 @@
+var e=[`heading`,`agenda`,`decisions`,`actions`,`notice`,`quote`,`bullets`,`numbers`,`contact`,`closing`];export{e as t};
