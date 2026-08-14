@@ -69,6 +69,17 @@
      WCAG 2.2 SC 2.4.11 and SC 2.4.13. */
   --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px var(--c-brand-mid);
 
+  /**
+   * The logo's intrinsic aspect ratio, taken from the SVG's `viewBox` and never
+   * overridden (§12.8). It is declared here so the image reserves its box before
+   * it has loaded: a logo that grows after first layout makes Paged.js re-flow
+   * mid-pagination and emit the document twice.
+   *
+   * When the real mark replaces the placeholder, this changes with it — the step
+   * is listed in public/brand/README.md.
+   */
+  --logo-aspect: 300 / 84;
+
   /* Page geometry */
   --page-width: 210mm;
   --page-height: 297mm;

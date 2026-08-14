@@ -16,6 +16,13 @@
   size: A4 portrait;
   margin: 18mm 20mm;
 
+  /* Pages 2 and beyond repeat a reduced lockup (§12.8). */
+  @top-left {
+    content: element(runninghead);
+    vertical-align: bottom;
+    padding-bottom: 4mm;
+  }
+
   @bottom-left {
     content: string(nl-organisation);
     font-family: "Source Sans 3 Variable", system-ui, sans-serif;
@@ -33,6 +40,18 @@
     vertical-align: top;
     padding-top: 3mm;
   }
+}
+
+/* Page 1 carries the full masthead in the flow, so the margin box stays empty. */
+@page :first {
+  @top-left {
+    content: none;
+  }
+}
+
+.nl-running-head {
+  display: flex;
+  position: running(runninghead);
 }
 
 /* The organisation line is set once and repeated by the footer margin box. */

@@ -42,6 +42,7 @@
 
 .nl-logo {
   width: 32mm;
+  aspect-ratio: var(--logo-aspect);
   height: auto;
   flex: none;
 }
@@ -53,6 +54,29 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-align: right;
+}
+
+/**
+ * The reduced lockup for pages 2 and beyond. Invisible on screen and in the
+ * continuous fallback; `paged.css` promotes it into the page margin box.
+ */
+.nl-running-head {
+  display: none;
+  align-items: center;
+  gap: 3mm;
+}
+
+.nl-running-logo {
+  width: 20mm;
+  aspect-ratio: var(--logo-aspect);
+  height: auto;
+}
+
+.nl-running-org {
+  color: var(--c-muted);
+  font-size: 8.5pt;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 /* ---------- document header ---------- */
@@ -444,6 +468,29 @@
   font-size: 8.5pt;
   letter-spacing: 0.01em;
   min-height: var(--footer-band);
+}
+
+/**
+ * Paged.js is handed the document's blocks as siblings rather than wrapped in
+ * the `.nl-doc` article, because a single root spanning every page is the case
+ * its splitting logic handles worst — it re-emits earlier children after a
+ * break, and the preview then shows the first sections twice.
+ *
+ * The typography the article would have supplied is therefore declared on the
+ * page's content area instead. The page box supplies the margins, so nothing
+ * here reinstates padding.
+ */
+.pagedjs_page_content > div {
+  color: var(--c-ink);
+  font-family: var(--f-sans);
+  font-size: 10.5pt;
+  line-height: 1.55;
+  hyphens: auto;
+  text-align: left;
+}
+
+.pagedjs_page .nl-footer {
+  display: none;
 }
 
 /* ---------- preview-only affordances ---------- */

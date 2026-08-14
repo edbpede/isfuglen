@@ -3,7 +3,7 @@
   import type { Translator } from "../lib/i18n/index";
   import { labelsFor } from "../lib/labels/index";
   import type { NewsletterDoc } from "../lib/model/types";
-  import { renderDocumentHtml } from "../lib/render/html";
+  import { renderDocumentBody, renderDocumentHtml } from "../lib/render/html";
   import pagedCss from "../styles/paged.css?raw";
   import PageIndicator from "./PageIndicator.svelte";
   import ZoomControl from "./ZoomControl.svelte";
@@ -45,13 +45,18 @@
   let fallback = $state(false);
   let currentPage = $state(1);
 
+  const renderOptions = { logoSrc: "/brand/ishoej-kreds18.svg", interactive: true } as const;
   const labels = $derived(labelsFor(doc.docLang));
-  const html = $derived(
-    renderDocumentHtml(doc, labels, {
-      logoSrc: "/brand/ishoej-kreds18.svg",
-      interactive: true,
-    }),
-  );
+
+  /** The continuous document, used on screen and by the fallback path. */
+  const html = $derived(renderDocumentHtml(doc, labels, renderOptions));
+
+  /**
+   * The same content as siblings rather than inside one `<article>`. Paged.js
+   * splits a single root across every page, and doing so duplicates the first
+   * sections; a flat sequence is the case it handles well.
+   */
+  const flow = $derived(renderDocumentBody(doc, labels, renderOptions));
 
   const fitScale = $derived(Math.min(1, availableWidth / PAGE_WIDTH_PX));
   const scale = $derived(Math.max(0.35, Math.min(1.5, fitScale + zoomStep * 0.1)));
@@ -87,7 +92,7 @@
   // Re-pagination is debounced after the last edit, runs against a detached
   // fragment, and swaps in on completion.
   $effect(() => {
-    const source = html;
+    const source = flow;
     let cancelled = false;
 
     const timer = setTimeout(async () => {

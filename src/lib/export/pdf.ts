@@ -47,14 +47,34 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
     return { ok: false, reason: "load", detail: "No DOM", durationMs: 0 };
   }
 
+  /**
+   * Transparent and behind everything, but *at the origin* rather than parked
+   * off-viewport.
+   *
+   * Paged.js resolves the first page's break with point-based queries, which
+   * return nothing for a subtree positioned at `left: -20000px`. It then finds
+   * no break, fills page one past its box, and lays the whole document out
+   * again from the beginning on the next page — so the preview shows the first
+   * sections twice. Measured: with the stage at the origin the same document
+   * paginates once, correctly.
+   *
+   * `opacity: 0` keeps layout and client rects intact where `visibility: hidden`
+   * would empty the text rects and reintroduce the same failure.
+   */
   const stage = document.createElement("div");
   stage.setAttribute("aria-hidden", "true");
   stage.style.cssText =
-    "position:fixed;left:-20000px;top:0;width:210mm;visibility:hidden;pointer-events:none;";
+    "position:absolute;left:0;top:0;width:210mm;opacity:0;z-index:-1;pointer-events:none;";
   document.body.appendChild(stage);
 
   const source = document.createElement("div");
   source.innerHTML = options.html;
+
+  // Fonts and images must be settled *before* the flow starts. Paged.js installs
+  // a ResizeObserver on every page it emits; a logo that loads or a font that
+  // swaps mid-flow triggers a relayout that appends a second, complete rendering
+  // after the partial one, and the preview then shows the document twice.
+  await settleAssets(source, Math.min(budget, 1500));
 
   const collected: CSSStyleSheet[] = [];
   const previous = activeSheets;
@@ -67,6 +87,21 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
     if (polisher && supportsConstructableSheets()) {
       redirectPolisherToCssom(polisher, collected);
     }
+
+    /**
+     * Paged.js installs a `ResizeObserver` on every page so a live document can
+     * relayout as it changes. A `ResizeObserver` always fires once on
+     * observation, which cancels the in-flight render; `Chunker.flow` then
+     * restarts it *without removing the pages already emitted*, and the preview
+     * shows the first sections twice.
+     *
+     * This render is offscreen, one-shot and never resized, so the observer has
+     * nothing to react to. Disconnecting each page the moment it is laid out
+     * removes the restart entirely.
+     */
+    previewer.chunker?.on?.("renderedPage", (page) => {
+      page.removeListeners?.();
+    });
 
     // `preview` spreads its second argument into `polisher.add(...)`, so it has
     // to be a list. Each entry is either a URL or a `{ name: cssText }` record;
@@ -96,6 +131,15 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
     teardown(previewer);
     stage.remove();
   }
+}
+
+async function settleAssets(root: HTMLElement, ms: number): Promise<void> {
+  const images = [...root.querySelectorAll("img")].map((image) =>
+    image.decode().catch(() => undefined),
+  );
+  const fonts = document.fonts?.ready ?? Promise.resolve();
+  const settled = Promise.allSettled([...images, fonts]);
+  await Promise.race([settled, new Promise((resolve) => setTimeout(resolve, ms))]);
 }
 
 async function loadPreviewer() {

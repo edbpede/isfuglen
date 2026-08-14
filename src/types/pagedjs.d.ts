@@ -18,6 +18,8 @@ declare module "pagedjs" {
   export interface PagedChunker {
     pages?: PagedPage[];
     stop?: () => void;
+    /** `renderedPage` fires after a page has been laid out. */
+    on?: (event: string, listener: (page: PagedPage) => void) => void;
   }
 
   export class Previewer {
