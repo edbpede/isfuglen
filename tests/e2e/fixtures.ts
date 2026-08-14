@@ -45,11 +45,16 @@ export function longNotes(sections = 14): string {
   return parts.join("\n");
 }
 
-/** Pastes notes on the entry screen and formats them. */
+/**
+ * Pastes notes on the entry screen and formats them.
+ *
+ * Waits on a section card rather than on the preview: below the `lg` breakpoint
+ * the panes become tabs and the preview is not the default one.
+ */
 export async function formatNotes(page: Page, notes = DANISH_NOTES): Promise<void> {
   await page.getByLabel(/Dine noter|Your notes/).fill(notes);
   await page.getByRole("button", { name: /Formatér nyhedsbrev|Format newsletter/ }).click();
-  await page.getByRole("region", { name: /Forhåndsvisning|preview/i }).waitFor();
+  await page.locator("[data-section-card]").first().waitFor();
 }
 
 /**
