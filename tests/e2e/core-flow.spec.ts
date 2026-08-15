@@ -114,6 +114,66 @@ test("a heading the parser invented can be undone in two named clicks", async ({
   await expect(merged).toContainText("Arbejdstid");
 });
 
+test("clicking an unfocused section body opens it with the caret where the pointer landed", async ({
+  page,
+}) => {
+  // Two wrapped paragraphs, so the target word sits well inside the body: the
+  // fallback drops the caret at the very end, and only an interior target can
+  // tell the two outcomes apart.
+  const paragraph = [
+    "Vi drøftede forberedelsestiden indgående på mødet, og flere kolleger fortalte",
+    "om arbejdstidsaftalen og om, hvordan medarbejderrepræsentanterne oplever",
+    "presset i hverdagen på skolerne. Kredsen følger op på næste møde, og",
+    "formanden lovede et udkast til en arbejdsgruppe inden efterårsferien.",
+  ].join(" ");
+
+  await page.goto("/");
+  await formatNotes(
+    page,
+    ["Nyhedsbrev til klubben", "", "Nyt fra kredsen", paragraph, "", paragraph, ""].join("\n"),
+  );
+
+  const card = page.locator("[data-section-card]").last();
+  const stand = card.locator("button.nl-editor");
+  await stand.scrollIntoViewIfNeeded();
+
+  // Measured from the rendered layout rather than guessed: the point has to be
+  // a real glyph in the static stand-in for the click to mean anything.
+  const point = await stand.evaluate((element, word) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = (node.textContent ?? "").indexOf(word);
+      if (index === -1) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + word.length);
+      const box = range.getBoundingClientRect();
+      return { x: Math.round(box.left) + 1, y: Math.round(box.top + box.height / 2) };
+    }
+    return null;
+  }, "formanden");
+  // Thrown rather than asserted: a silent fallback click on the viewport corner
+  // would report a broken fixture as a mount failure.
+  if (!point) throw new Error('the static stand-in never rendered the word "formanden"');
+
+  await page.mouse.click(point.x, point.y);
+
+  // The mount itself is under test: an `$effect` that reads the state it writes
+  // destroys each instance as it creates it, and the section stays a dead
+  // rectangle no keystroke ever reaches.
+  const surface = card.locator(".nl-editor-surface");
+  await expect(surface).toBeVisible();
+  await expect(surface).toBeFocused();
+
+  // And the caret is where the user aimed, not at the end of the body. Scoped
+  // to the paragraph that was clicked: the two paragraphs are identical, so an
+  // assertion over the whole surface would accept a miss of exactly one
+  // paragraph — which is the shape a layout shift during the mount would take.
+  await page.keyboard.type("HER");
+  await expect(surface.locator("p").first()).toContainText("HERformanden");
+  await expect(surface).not.toContainText("efterårsferien.HER");
+});
+
 test("the greeting field is big enough to hold a greeting", async ({ page }) => {
   await page.goto("/");
   await formatNotes(page);

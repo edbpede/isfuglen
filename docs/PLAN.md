@@ -475,10 +475,10 @@ Lexical is a fine editor and slightly smaller, but its centre of gravity is Reac
 ```ts
 // Inside a Svelte 5 island. Shown to fix the pattern, not to pre-empt implementation.
 let el = $state<HTMLElement>();
-let editor: Editor | undefined;
+let editor = $state<Editor | undefined>();   // the toolbar reads it, so it is reactive
 
 $effect(() => {
-  if (!el || editor) return;
+  if (!el) return;                          // never `|| editor` — see rule 4
   editor = new Editor({
     element: el,
     extensions: sectionBodySchema,     // our fixed, minimal set
@@ -493,11 +493,12 @@ $effect(() => {
 });
 ```
 
-Three rules this pattern encodes:
+Four rules this pattern encodes:
 
 1. **One `$effect`, with cleanup.** TipTap owns real DOM and event listeners; failing to `destroy()` on section removal leaks.
 2. **Never write editor state back into the editor from a derived value.** The editor is uncontrolled; `NewsletterDoc` is updated *from* it. Feeding the model back in on every update causes cursor jumps and, with runes, an `effect_update_depth_exceeded` loop.
 3. **Lazy mount on first focus.** Until focused, a section renders as static HTML from the model — identical markup to the preview. Mounting on `focusin` keeps a 15-section document at one or two live ProseMirror instances, and makes the post-parse first paint instant.
+4. **The effect never reads the handle it writes.** The toolbar needs the instance, so `editor` is reactive — and the moment the guard reads it, the effect invalidates itself: cleanup destroys the instance it has just created, the guard sees `undefined` again, and the section spins between create and destroy without ever showing a caret. Rule 2 trains you to expect `effect_update_depth_exceeded` here; you will not get it. The write lands a microtask later, so each turn is a fresh batch and the depth guard never counts past one — the spin is silent, and the only symptom is a section body that can never be typed in. Track the mount flag and the host element only; both flip exactly once per mount.
 
 ### 7.4 Editor feature set — final
 
