@@ -80,8 +80,8 @@ export default defineConfig({
           /**
            * Everything named here is dynamically imported and must never enter
            * the initial workspace chunk (docs/PLAN.md §6.4): the paginator, the
-           * DOCX writer, the editor (mounted on first focus) and the draft
-           * schema (read only at the storage boundary).
+           * PDF writer, the DOCX writer, the editor (mounted on first focus)
+           * and the draft schema (read only at the storage boundary).
            *
            * Naming them makes that visible in `dist/`, lets
            * `scripts/check-bundle.ts` measure the budget rather than estimate
@@ -89,7 +89,38 @@ export default defineConfig({
            * exercises the "Paged.js fails to load" branch of §13.2.
            */
           manualChunks(id) {
+            /**
+             * Vite's dynamic-import preload helper is shared by every island
+             * and belongs with the runtime, not with a payload. Left
+             * unassigned, Rollup folds it into whichever manual chunk it
+             * likes — it chose the PDF writer, which made the initial
+             * workspace chunk statically import a quarter of a megabyte and
+             * turned "block the writer" into "break island hydration".
+             */
+            if (id.includes("preload-helper")) return "client";
             if (id.includes("node_modules/pagedjs")) return "pagedjs";
+            /**
+             * Named `libpdf` rather than `pdf`: Vite derives a chunk name from
+             * the module filename too, and `src/lib/export/pdf.ts` is imported
+             * by the preview, so a chunk called `pdf` merges the writer into
+             * the initial workspace payload. That is invisible in the built
+             * output and fatal at run time — blocking the chunk breaks island
+             * hydration rather than just the export.
+             *
+             * `pako` is deliberately not listed. jszip depends on it too, and
+             * claiming it here makes the DOCX chunk import the PDF one, so
+             * exporting a Word file would download the PDF writer with it.
+             */
+            if (
+              id.includes("node_modules/@libpdf") ||
+              id.includes("node_modules/@noble") ||
+              id.includes("node_modules/@scure") ||
+              id.includes("node_modules/asn1js") ||
+              id.includes("node_modules/pkijs") ||
+              id.includes("node_modules/lru-cache")
+            ) {
+              return "libpdf";
+            }
             if (id.includes("node_modules/docx") || id.includes("node_modules/jszip")) {
               return "docx";
             }
