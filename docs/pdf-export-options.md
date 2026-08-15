@@ -322,6 +322,18 @@ it is the condition under which preview and export are identical by construction
 rather than within a tolerance, and it removes one more thing four layout engines
 can disagree about.
 
+Hinting is the same problem from the other side, and it only appeared on CI. The
+parity gate passed on macOS and failed on Linux, where the same 14 px sample
+measured **456.000 px against the font's 445.802** — 2.2 % wider, and exactly an
+integer, because the engine laid the line out with whole-pixel glyph advances.
+Like kerning, that error accumulates inside the line. `text-rendering:
+geometricPrecision` asks for exact metrics on every platform, which is what a
+document destined for print wants regardless.
+
+The general shape of both findings: anything that makes a rendered line's width
+differ from the sum of its glyphs' design advances has to be turned off, because
+the PDF can only address the latter.
+
 ### 8.4 Baselines are measured, not derived
 
 §7.3 of the implementation plan proposed computing the baseline from the font's
