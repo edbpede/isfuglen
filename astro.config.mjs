@@ -45,10 +45,20 @@ export default defineConfig({
        * exfiltration path here — `default-src 'self'` still governs every URL a
        * stylesheet could reference.
        *
-       * `'unsafe-inline'` is ignored by browsers whenever a hash is present in
-       * the same directive, which is why `build.inlineStylesheets` is set to
-       * `never` below: with no inline `<style>` in the output, Astro emits no
-       * style hashes and this actually takes effect.
+       * `'unsafe-inline'` is nonetheless inert, and `build.inlineStylesheets:
+       * "never"` does not rescue it: Astro emits its own
+       * `astro-island{display:contents}` rule inline for hydration, so a style
+       * hash is always present and browsers ignore `'unsafe-inline'` whenever
+       * one is. It stays declared because a host that serves this without the
+       * island runtime would have no hash and would then need it.
+       *
+       * The practical consequence, and the reason it is written down here: run
+       * time styling has to go through the CSSOM. `element.style.someProperty`
+       * and `CSSStyleSheet`/`adoptedStyleSheets` are unaffected;
+       * `setAttribute("style", …)` is refused outright and a `<style>` element
+       * built in JavaScript is refused with it. `src/lib/export/paint.ts` and
+       * the Paged.js polisher redirect in `src/lib/export/pdf.ts` both take the
+       * CSSOM route for exactly this reason.
        */
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
     },

@@ -22,6 +22,18 @@
   font-size: 10.5pt;
   line-height: 1.55;
   hyphens: auto;
+  /**
+   * The hyphen a break inserts, stated rather than left to the default.
+   *
+   * CSS hyphenates with U+2010 HYPHEN, which the Latin subsets of Source Sans 3
+   * and Source Serif 4 do not contain — Google's `latin` charset carries the
+   * dashes and quotes but not that one — so the browser draws it from a
+   * fallback font and the export has nothing to embed. U+002D is in every
+   * face, and `src/lib/export/paint.ts` reads this value back rather than
+   * assuming it.
+   */
+  -webkit-hyphenate-character: "-";
+  hyphenate-character: "-";
   text-align: left;
   /**
    * One code point, one glyph.
@@ -501,6 +513,8 @@
   font-size: 10.5pt;
   line-height: 1.55;
   hyphens: auto;
+  -webkit-hyphenate-character: "-";
+  hyphenate-character: "-";
   text-align: left;
   font-kerning: none;
   font-variant-ligatures: none;
