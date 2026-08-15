@@ -1,23 +1,24 @@
 <script lang="ts">
   import { renderClipboard, writeToClipboard } from "../lib/export/clipboard";
-  import { docxFilename } from "../lib/export/filename";
-  import { printNewsletter } from "../lib/export/pdf";
+  import { docxFilename, pdfFilename } from "../lib/export/filename";
   import { formatClockTime } from "../lib/i18n/format";
   import type { Translator } from "../lib/i18n/index";
   import type { Lang } from "../lib/i18n/types";
   import { labelsFor } from "../lib/labels/index";
   import type { NewsletterDoc } from "../lib/model/types";
   import type { SaveState } from "../lib/stores/status.svelte";
+  import pagedCss from "../styles/paged.css?raw";
   import Dialog from "./ui/Dialog.svelte";
 
   /**
    * Export is a persistent bar in the workspace, not a destination — the user
    * never navigates away from their document to export it (docs/PLAN.md §3.2).
    *
-   * The PDF button says what actually happens. "Hent PDF" would promise a
-   * download this version cannot deliver without rasterising the document, and a
-   * tool that mislabels one button teaches the user to distrust every other one
-   * (§13.5).
+   * Both file exports follow the same shape: a busy state, a dynamic import so
+   * the writer never enters the initial workspace chunk, an announcement on
+   * start and finish, and a real error message on failure. The PDF button says
+   * "Hent PDF" because that is now what it does — it produces the file rather
+   * than opening a dialog and hoping the user picks the right destination.
    */
   interface Props {
     doc: NewsletterDoc;
@@ -32,7 +33,10 @@
 
   let { doc, t, lang, saveState, savedAt, announce, onerror, onsavedraft }: Props = $props();
 
+  const LOGO_SRC = "/brand/ishoej-kreds18.svg";
+
   let busy = $state(false);
+  let busyPdf = $state(false);
   let copied = $state(false);
   let copyDialogOpen = $state(false);
   let manualHtml = $state("");
@@ -47,6 +51,38 @@
     return t("save.unsaved");
   });
 
+  function download(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadPdf(): Promise<void> {
+    busyPdf = true;
+    announce(t("export.pdfWorking"));
+    try {
+      // Dynamically imported: the painter pulls in the PDF writer, which is a
+      // quarter of a megabyte and must never enter the initial bundle (§6.4).
+      const { buildPdf } = await import("../lib/export/pdf");
+      const blob = await buildPdf(doc, {
+        labels: labelsFor(doc.docLang),
+        css: pagedCss,
+        logoSrc: LOGO_SRC,
+      });
+      download(blob, pdfFilename(doc));
+      announce(t("export.pdfDone"));
+    } catch (error) {
+      // Named rather than swallowed: the browser's own print function still
+      // produces a usable file, and the message says so.
+      onerror(`${t("export.pdfFailed")} ${String(error)}`);
+    } finally {
+      busyPdf = false;
+    }
+  }
+
   async function downloadDocx(): Promise<void> {
     busy = true;
     announce(t("export.docxWorking"));
@@ -57,12 +93,7 @@
       const logo = await loadLogo();
       const blob = await buildDocx(doc, labelsFor(doc.docLang), logo ? { logo } : {});
 
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = docxFilename(doc);
-      anchor.click();
-      URL.revokeObjectURL(url);
+      download(blob, docxFilename(doc));
 
       announce(t("export.docxDone"));
     } catch (error) {
@@ -98,10 +129,9 @@
 <div
   class="app-chrome flex flex-wrap items-center gap-3 border-t border-hairline bg-white px-4 py-3"
 >
-  <button type="button" class="btn-primary" onclick={() => printNewsletter(doc)}>
-    {t("export.pdf")}
+  <button type="button" class="btn-primary" disabled={busyPdf} onclick={downloadPdf}>
+    {busyPdf ? t("export.pdfWorking") : t("export.pdf")}
   </button>
-  <span class="text-xs text-muted">{t("export.pdfHint")}</span>
 
   <button type="button" class="btn-secondary" disabled={busy} onclick={downloadDocx}>
     {busy ? t("export.docxWorking") : t("export.docx")}

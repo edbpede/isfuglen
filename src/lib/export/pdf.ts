@@ -1,20 +1,24 @@
+import type { DocumentLabels } from "../labels/types";
 import type { NewsletterDoc } from "../model/types";
-import { printTitle } from "./filename";
+import { footerParts, renderDocumentBody, safeHref } from "../render/html";
+import { documentTitle } from "./filename";
+import { type FaceKey, faceUrl } from "./fonts";
+import type { PaintResult } from "./paint";
 
 /**
- * PDF — docs/PLAN.md §13.
+ * PDF — docs/PLAN.md §13, docs/pdf-export-options.md.
  *
- * There is no PDF generator in this bundle, and the button says so: "Udskriv
- * eller gem som PDF". A true one-click download would require either rasterising
- * the document — which kills selectable text and logo sharpness — or hand-building
- * a typesetter, which is weeks of work and a long tail of Danish line-breaking
- * bugs. Printing keeps the text real, the fonts real and the logo vector.
+ * The export does not typeset anything. By the time anyone can click it, the
+ * browser has already laid the document out and Paged.js has already paginated
+ * it, so every line break, every Danish hyphenation decision and every page
+ * break exists as real geometry. `paintStage` reads that geometry and
+ * `writePdf` writes the equivalent drawing operators. Danish line breaking is
+ * an input, not a problem to solve.
  *
- * Paged.js paginates both the on-screen preview and the printed document, so the
- * preview matches the export by construction. The native print stylesheet is a
- * mandatory fallback, not a hypothetical one: if Paged.js fails to load, throws,
- * or exceeds its budget, the export still meets the degraded criteria of
- * §24.1.7 and the preview says so.
+ * `print.css` stays correct and Ctrl+P keeps working, but it is no longer what
+ * the export button does. The preview's own degraded path — unpaginated,
+ * announced through `preview.fallback` — is unchanged; the export refuses
+ * instead, because a single twelve-metre page is worse than an honest error.
  */
 
 /** Exceeding this is treated as a Paged.js failure, not something to wait out. */
@@ -83,8 +87,16 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
    */
   const stage = document.createElement("div");
   stage.setAttribute("aria-hidden", "true");
-  stage.style.cssText =
-    "position:absolute;left:0;top:0;width:210mm;opacity:0;z-index:-1;pointer-events:none;";
+  // Property by property, not `cssText`: the Content Security Policy carries
+  // style hashes, which makes browsers ignore `'unsafe-inline'` in the same
+  // directive, and Chromium reports a violation for a bulk assignment.
+  stage.style.position = "absolute";
+  stage.style.left = "0";
+  stage.style.top = "0";
+  stage.style.width = "210mm";
+  stage.style.opacity = "0";
+  stage.style.zIndex = "-1";
+  stage.style.pointerEvents = "none";
   document.body.appendChild(stage);
 
   const source = document.createElement("div");
@@ -252,23 +264,116 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+/* ---------- the export ---------- */
+
+export interface BuildOptions {
+  /** The document's own label pack, as the preview uses. */
+  labels: DocumentLabels;
+  /** `src/styles/paged.css`, the same text the preview hands to Paged.js. */
+  css: string;
+  /** Path to the brand SVG, fetched once and converted to paths. */
+  logoSrc: string;
+  budgetMs?: number;
+  /** Injected so a test can supply faces without a server. */
+  loadFace?: (face: FaceKey) => Promise<Uint8Array>;
+}
+
+export class ExportError extends Error {
+  constructor(
+    message: string,
+    readonly reason: "pagination" | "paint" | "write",
+  ) {
+    super(message);
+    this.name = "ExportError";
+  }
+}
+
+async function fetchSameOrigin(url: string): Promise<Response> {
+  const response = await fetch(url, { credentials: "omit", cache: "force-cache" });
+  if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+  return response;
+}
+
+async function defaultLoadFace(face: FaceKey): Promise<Uint8Array> {
+  return new Uint8Array(await (await fetchSameOrigin(faceUrl(face))).arrayBuffer());
+}
+
 /**
- * Opens the print dialog with the document's own title in place, so the saved
- * file is named after the newsletter rather than after the app. Restored
- * afterwards, including when the user cancels.
+ * Paginates the document and paints the result into a PDF.
+ *
+ * It re-paginates rather than reading the preview's pages. That costs one
+ * Paged.js run and buys three things at once: the measurement happens on an
+ * unscaled stage rather than inside `.preview-scaler`'s `transform: scale()`,
+ * it cannot read a debounced preview that is one edit behind, and the export
+ * markup is the non-interactive rendering rather than the click-mapped one.
  */
-export function printNewsletter(doc: NewsletterDoc): void {
-  const previous = document.title;
-  document.title = printTitle(doc);
+export async function buildPdf(doc: NewsletterDoc, options: BuildOptions): Promise<Blob> {
+  const html = renderDocumentBody(doc, options.labels, { logoSrc: options.logoSrc });
 
-  const restore = () => {
-    document.title = previous;
-    window.removeEventListener("afterprint", restore);
-  };
-  window.addEventListener("afterprint", restore);
+  // Dynamic for the same reason `loadPreviewer` is: `paginate` is imported by
+  // the preview and therefore lives in the initial workspace chunk, and nothing
+  // the export needs may be dragged in with it.
+  const { paintStage } = await import("./paint");
 
-  window.print();
+  let painted: PaintResult | undefined;
+  let paintError: unknown;
 
-  // Safari does not always fire `afterprint`; the timeout is the safety net.
-  setTimeout(restore, 2000);
+  const result = await paginate({
+    html,
+    css: options.css,
+    budgetMs: options.budgetMs,
+    visit: async (stage) => {
+      try {
+        // The running footer reads two custom properties, exactly as the preview
+        // sets them after pagination. They are set here rather than earlier
+        // because the page total is not known until the flow has finished.
+        const pages = stage.querySelectorAll(".pagedjs_page").length;
+        stage.style.setProperty("--nl-footer", JSON.stringify(footerParts(doc).join(" \u00b7 ")));
+        stage.style.setProperty("--nl-pages", JSON.stringify(String(pages)));
+
+        painted = await paintStage(stage, {
+          safeHref,
+          loadSvg: async (source) => (await fetchSameOrigin(source)).text(),
+        });
+      } catch (error) {
+        // Kept rather than rethrown: a paint failure and a Paged.js failure need
+        // different messages, and `paginate` reports both as "error".
+        paintError = error;
+      }
+    },
+  });
+
+  if (paintError) throw new ExportError(String(paintError), "paint");
+  if (!result.ok) {
+    throw new ExportError(`Pagination failed (${result.reason}): ${result.detail}`, "pagination");
+  }
+  if (!painted) throw new ExportError("The painter produced nothing", "paint");
+
+  if (painted.uncovered.length > 0) {
+    throw new ExportError(
+      `No embedded font covers ${painted.uncovered.map((char) => `"${char}"`).join(", ")}`,
+      "write",
+    );
+  }
+
+  const load = options.loadFace ?? defaultLoadFace;
+  const faces = await Promise.all(
+    painted.faces.map(async (face) => ({ face, bytes: await load(face) })),
+  );
+
+  // Dynamic, for the same reason `loadPreviewer` above is: the writer is a
+  // quarter of a megabyte and must never enter the initial workspace chunk.
+  const { writePdf } = await import("./write");
+
+  try {
+    return await writePdf({
+      pages: painted.pages,
+      faces,
+      title: documentTitle(doc),
+      author: doc.meta.organisation?.trim() || undefined,
+      language: doc.docLang,
+    });
+  } catch (error) {
+    throw new ExportError(String(error), "write");
+  }
 }

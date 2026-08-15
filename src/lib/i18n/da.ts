@@ -197,8 +197,11 @@ export const da = {
     empty: "Nyhedsbrevet er tomt. Skriv noget i redigeringsruden.",
   },
   export: {
-    pdf: "Udskriv eller gem som PDF",
-    pdfHint: "Vælg »Gem som PDF« i printdialogen.",
+    pdf: "Hent PDF",
+    pdfWorking: "Laver PDF …",
+    pdfDone: "PDF-filen er hentet.",
+    pdfFailed:
+      "Kunne ikke lave PDF-filen. Du kan stadig udskrive nyhedsbrevet med browserens egen printfunktion (Ctrl+P).",
     docx: "Hent Word (.docx)",
     docxWorking: "Laver Word-fil …",
     docxDone: "Word-filen er hentet.",

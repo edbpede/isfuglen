@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import JSZip from "jszip";
 import { buildDocx, readPngSize } from "../../../src/lib/export/docx";
-import { docxFilename, printTitle, slugify } from "../../../src/lib/export/filename";
+import {
+  documentTitle,
+  docxFilename,
+  pdfFilename,
+  slugify,
+} from "../../../src/lib/export/filename";
 import { labelsFor } from "../../../src/lib/labels/index";
 import { everyBlockDoc } from "../helpers/document";
 
@@ -186,7 +191,13 @@ describe("filenames", () => {
     expect(docxFilename(doc)).toBe("nyhedsbrev.docx");
   });
 
-  test("the print title is what the browser suggests as the PDF filename", () => {
-    expect(printTitle(everyBlockDoc("da"))).toBe("Klubmøde august — Ishøj Lærerkreds");
+  test("both exports name the file from the same slug", () => {
+    const doc = everyBlockDoc("da");
+    expect(pdfFilename(doc)).toBe(docxFilename(doc).replace(/\.docx$/, ".pdf"));
+    expect(pdfFilename(doc)).toEndWith(".pdf");
+  });
+
+  test("the document title is what the PDF records as its metadata title", () => {
+    expect(documentTitle(everyBlockDoc("da"))).toBe("Klubmøde august — Ishøj Lærerkreds");
   });
 });

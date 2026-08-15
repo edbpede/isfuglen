@@ -3,9 +3,8 @@ import type { NewsletterDoc } from "../model/types";
 /**
  * Export filenames — docs/PLAN.md §13.4.
  *
- * Also what `document.title` is set to immediately before `window.print()`: the
- * browser print pipeline derives the PDF's title and the suggested filename from
- * it, and that is the only piece of PDF metadata this path can control.
+ * Also the `/Title` the PDF writer records, which is what a reader shows in its
+ * window title and what a search index reads first.
  */
 
 const MAX_LENGTH = 60;
@@ -38,8 +37,12 @@ export function docxFilename(doc: NewsletterDoc): string {
   return `${documentSlug(doc)}.docx`;
 }
 
-/** `Klubmøde august — Ishøj Lærerkreds`, restored after the dialog closes. */
-export function printTitle(doc: NewsletterDoc): string {
+export function pdfFilename(doc: NewsletterDoc): string {
+  return `${documentSlug(doc)}.pdf`;
+}
+
+/** `Klubmøde august — Ishøj Lærerkreds`, written into the PDF's metadata. */
+export function documentTitle(doc: NewsletterDoc): string {
   const title = doc.meta.title.trim();
   const organisation = doc.meta.organisation?.trim();
   if (title && organisation) return `${title} — ${organisation}`;

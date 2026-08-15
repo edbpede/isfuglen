@@ -194,8 +194,11 @@ export const en: Messages = {
     empty: "The newsletter is empty. Write something in the editor pane.",
   },
   export: {
-    pdf: "Print or save as PDF",
-    pdfHint: "Choose “Save as PDF” in the print dialog.",
+    pdf: "Download PDF",
+    pdfWorking: "Building the PDF …",
+    pdfDone: "The PDF has been downloaded.",
+    pdfFailed:
+      "Could not build the PDF. You can still print the newsletter with the browser's own print function (Ctrl+P).",
     docx: "Download Word (.docx)",
     docxWorking: "Building the Word file …",
     docxDone: "The Word file has been downloaded.",
