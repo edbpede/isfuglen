@@ -9,5 +9,3 @@ playwright-report
 public/brand
 LICENSE
 .augment
-# Authored normative text: reflowing it rewrites the document and says nothing.
-docs/PLAN.md
