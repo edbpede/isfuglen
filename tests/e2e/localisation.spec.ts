@@ -72,7 +72,7 @@ test("5. and 6. the two languages are independent, and labels follow the documen
   const preview = page.getByRole("region", { name: "Newsletter preview" });
 
   // Interface English, document still Danish.
-  await expect(page.getByRole("button", { name: "Print or save as PDF" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible();
   await expect(preview.locator(".nl-agenda .nl-block-label")).toHaveText("Dagsorden");
   await expect(preview.locator(".nl-doc")).toHaveAttribute("lang", "da");
 
@@ -84,7 +84,7 @@ test("5. and 6. the two languages are independent, and labels follow the documen
   await expect(preview.locator(".nl-doc")).toHaveAttribute("lang", "en");
 
   // And the chrome is still English.
-  await expect(page.getByRole("button", { name: "Print or save as PDF" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible();
 });
 
 test("7. dates and times use the conventions of the document language", async ({ page }) => {
@@ -111,17 +111,17 @@ test("9. every visible string exists in both catalogs", async ({ page }) => {
   // Walk the chrome in Danish, then in English, and require that no string is
   // left behind in the other language.
   const danishChrome = await page.locator(".app-chrome").allInnerTexts();
-  expect(danishChrome.join(" ")).toContain("Udskriv eller gem som PDF");
+  expect(danishChrome.join(" ")).toContain("Hent PDF");
 
   await page.getByRole("button", { name: "English" }).click();
   const englishChrome = await page.locator(".app-chrome").allInnerTexts();
   const joined = englishChrome.join(" ");
 
-  expect(joined).toContain("Print or save as PDF");
+  expect(joined).toContain("Download PDF");
   expect(joined).toContain("Download Word (.docx)");
   expect(joined).toContain("Copy newsletter");
   // No Danish chrome string may survive the switch.
-  for (const danish of ["Udskriv eller gem", "Hent Word", "Kopiér nyhedsbrev", "Kladder"]) {
+  for (const danish of ["Hent PDF", "Hent Word", "Kopiér nyhedsbrev", "Kladder"]) {
     expect(joined).not.toContain(danish);
   }
 });

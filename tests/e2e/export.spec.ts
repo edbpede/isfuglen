@@ -84,7 +84,7 @@ test("the print stylesheet hides the application chrome", async ({ page }) => {
 
   const header = page.locator("header.app-chrome").first();
   await expect(header).toBeHidden();
-  await expect(page.getByRole("button", { name: "Udskriv eller gem som PDF" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Hent PDF" })).toBeHidden();
 
   // The document itself is still there, and still selectable text.
   await expect(page.locator(".nl-title").first()).toContainText("Klubmøde august");

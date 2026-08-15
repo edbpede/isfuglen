@@ -49,7 +49,7 @@ export interface WriteOptions {
 }
 
 export async function writePdf(options: WriteOptions): Promise<Blob> {
-  const pdf = await PDF.create();
+  const pdf = PDF.create();
 
   pdf.setTitle(options.title);
   if (options.author) pdf.setAuthor(options.author);

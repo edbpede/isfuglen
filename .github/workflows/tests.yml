@@ -40,11 +40,12 @@ jobs:
         run: bun install --frozen-lockfile
 
       # tests/unit/export/docx.test.ts asserts the intrinsic width of the brand
-      # raster the DOCX export embeds. That file is a build artefact
-      # (`public/brand/*@300.png`, gitignored and regenerated on every build), so
-      # a clean checkout has to produce it before the unit suite can read it.
-      - name: Generate the brand raster
-        run: bun run scripts/build-logo-png.ts
+      # raster the DOCX export embeds, and the PDF export embeds font programs
+      # decoded out of the Fontsource packages. Both are build artefacts
+      # (`public/brand/*@300.png` and `public/fonts/pdf/`, gitignored and
+      # regenerated on every build), so a clean checkout has to produce them.
+      - name: Generate the derived assets
+        run: bun run build:assets
 
       # `bunfig.toml` scopes `bun test` to tests/unit; the Playwright specs are
       # run below by their own runner.
@@ -56,8 +57,11 @@ jobs:
       - name: Bundle budget
         run: bun run check:bundle
 
+      # All three engines: tests/e2e/pdf-cross-browser.spec.ts exports the same
+      # document from each and compares the files, which is the claim the print
+      # dialog could never make.
       - name: Install browsers
-        run: bunx --bun playwright install --with-deps chromium
+        run: bunx --bun playwright install --with-deps chromium firefox webkit
 
       # playwright.config.ts starts its own server (`bun run build && bun run
       # scripts/serve-dist.ts`), so the suite always runs against the built

@@ -77,7 +77,7 @@ function italicFlag(sfnt: Sfnt): boolean {
   return (macStyle & 0b10) !== 0;
 }
 
-const pdf = await PDF.create();
+const pdf = PDF.create();
 const problems: string[] = [];
 const report: string[] = [];
 

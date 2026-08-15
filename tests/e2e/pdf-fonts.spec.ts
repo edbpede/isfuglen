@@ -53,7 +53,7 @@ test.describe("PDF font pipeline", () => {
   });
 
   test("the embedded faces cover Danish, the guillemets and the dashes", async ({ request }) => {
-    const pdf = await PDF.create();
+    const pdf = PDF.create();
     for (const face of allFaces().filter((candidate) => candidate.subset === "latin")) {
       const font = pdf.embedFont(await loadFace(request, face));
       for (const char of "æøåÆØÅ»«—–·") {
@@ -64,7 +64,7 @@ test.describe("PDF font pipeline", () => {
 
   test("advance widths agree with the browser to better than 0.1 %", async ({ page, request }) => {
     await page.goto("/");
-    const pdf = await PDF.create();
+    const pdf = PDF.create();
 
     for (const face of allFaces().filter((candidate) => candidate.subset === "latin")) {
       const font = pdf.embedFont(await loadFace(request, face));
