@@ -153,18 +153,32 @@
 }
 
 /*
- * The preflight reset strips `list-style` from every list, so an ordered list
- * has to ask for its numerals back. Without this a numbered list prints as
- * indented prose, which is the one thing it must never look like.
+ * The numerals are real elements emitted by `src/lib/render/html.ts`, not
+ * `::marker`. A marker box has no node, no client rect and no readable content,
+ * so the PDF export cannot transcribe one; and because these are literal text,
+ * a list Paged.js splits across a page break keeps its numbering.
  */
 .nl-ol {
-  list-style: decimal;
+  list-style: none;
+  padding-left: var(--mm-4);
 }
 
 .nl-ul li,
 .nl-ol li {
   margin-bottom: var(--mm-2);
   padding-left: var(--mm-1);
+}
+
+.nl-ol li {
+  position: relative;
+  padding-left: 7mm;
+}
+
+.nl-list-number {
+  position: absolute;
+  left: 0;
+  color: var(--c-brand);
+  font-weight: 600;
 }
 
 .nl-ul {
@@ -185,11 +199,6 @@
   width: 1.4mm;
   height: 1.4mm;
   background: var(--c-brand);
-}
-
-.nl-ol li::marker {
-  color: var(--c-brand);
-  font-weight: 600;
 }
 
 /* ---------- the shared block vocabulary ---------- */
@@ -231,7 +240,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  counter-reset: nl-agenda;
 }
 
 .nl-agenda-item {
@@ -241,11 +249,11 @@
   gap: var(--mm-2);
   margin-bottom: var(--mm-2);
   padding-left: 7mm;
-  counter-increment: nl-agenda;
 }
 
-.nl-agenda-item::before {
-  content: counter(nl-agenda);
+/* The chip and its numeral are one element: a filled circle with centred text,
+   which the export reads as a rounded rect plus a text run. */
+.nl-agenda-number {
   position: absolute;
   left: 0;
   top: -0.15em;
@@ -300,12 +308,16 @@
   padding-left: 5mm;
 }
 
-.nl-decision-item::before {
-  content: "\2713";
+/* Geometry, not U+2713: the tick is outside every `unicode-range` in fonts.css,
+   so it has always come from a system fallback that differs between platforms
+   and that the PDF export cannot embed. */
+.nl-decision-mark {
   position: absolute;
   left: 0;
-  color: var(--c-decision-bar);
-  font-weight: 700;
+  top: 0.35em;
+  width: 2.8mm;
+  height: 2.8mm;
+  fill: var(--c-decision-bar);
 }
 
 /* Action items — red fill, solid bar, `task — owner · deadline` */
@@ -331,13 +343,17 @@
   position: relative;
 }
 
+/* Geometry, not U+25A0 — same reason as the decision tick above. */
 .nl-action-item::before {
-  content: "\25A0";
+  content: "";
   position: absolute;
   left: 0;
-  top: -0.05em;
-  color: var(--c-action-bar);
-  font-size: 7pt;
+  top: 0.5em;
+  width: 1.8mm;
+  height: 1.8mm;
+  background: var(--c-action-bar);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .nl-action-meta {
@@ -348,10 +364,6 @@
 
 .nl-action-owner {
   font-weight: 600;
-}
-
-.nl-action-owner + .nl-action-due::before {
-  content: " · ";
 }
 
 /* Notices — warm fill with a gold bar, or blue fill with a brand-mid bar */

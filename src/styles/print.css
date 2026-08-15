@@ -88,7 +88,9 @@
   .nl-notice-important,
   .nl-decisions,
   .nl-actions,
-  .nl-agenda-item::before {
+  .nl-agenda-number,
+  .nl-action-item::before,
+  .nl-ul li::before {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
