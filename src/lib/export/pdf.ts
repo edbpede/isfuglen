@@ -32,6 +32,26 @@ export interface PaginateOptions {
   /** The Paged.js stylesheet text; see `src/styles/paged.css`. */
   css: string;
   budgetMs?: number;
+  /**
+   * Runs against the live, unscaled stage, after the flow has settled and
+   * before teardown.
+   *
+   * The PDF export reads finished geometry rather than recomputing it, and
+   * geometry only exists on an attached tree: `Range.getClientRects()` and
+   * `getComputedStyle()` both return nothing useful for a detached fragment,
+   * and `stage.innerHTML` is a string with no boxes in it.
+   *
+   * It must be this stage and not the visible preview. `PreviewPane` wraps the
+   * sheet in `.preview-scaler` with a `transform: scale(...)`, and every client
+   * rect inside a scaled ancestor comes back scaled. The stage is at the
+   * origin, at a true 210 mm, and never scaled.
+   *
+   * Deliberately outside the timeout budget: the budget exists to bound
+   * Paged.js, and a painter that needs 400 ms on a long document is not a
+   * pagination failure. A visitor that throws does fail the pagination, which
+   * is what the export wants — a half-painted PDF is worse than an error.
+   */
+  visit?: (stage: HTMLElement) => Promise<void>;
 }
 
 /**
@@ -116,6 +136,10 @@ export async function paginate(options: PaginateOptions): Promise<PaginationResu
     // run's sheets are only dropped once this one has succeeded.
     activeSheets = collected;
     dropSheets(previous);
+
+    // After the swap, so the visitor reads computed styles from this run's
+    // sheets rather than from a previous run's that is about to be dropped.
+    await options.visit?.(stage);
 
     const durationMs = performance.now() - started;
     return { ok: true, html: stage.innerHTML, pages: flow.total ?? countPages(stage), durationMs };
