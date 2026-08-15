@@ -58,7 +58,7 @@ export function classifyLine(
     line,
     kind: best.rule.kind,
     score: best.score,
-    confidence: confidenceFor(best.score, ambiguous),
+    confidence: best.rule.uncertain ? "low" : confidenceFor(best.score, ambiguous),
     ruleId: best.rule.id,
     extraction: best.rule.extract?.(line, ctx) ?? {},
   };

@@ -256,6 +256,20 @@ export function structuralRules(lang: DocLang): Rule[] {
         return { rest: stripped.text, marker: stripped.marker };
       },
     },
+    /**
+     * A list whose numbering the clipboard ate. Scored above `shortHeading` so
+     * the first item stops being read as a heading, and below every marker and
+     * lexicon rule so a list the writer actually marked still wins.
+     */
+    {
+      id: `${lang}.structure.recoveredList`,
+      lang,
+      kind: "orderedItem",
+      score: 50,
+      uncertain: true,
+      test: (line, ctx) => lostListRun(positionOf(line, ctx), ctx) !== undefined,
+      extract: (line) => ({ rest: line.text }),
+    },
     {
       id: `${lang}.structure.quote`,
       lang,
@@ -304,8 +318,13 @@ export function structuralRules(lang: DocLang): Rule[] {
         hasFollowingContent(line, ctx),
       extract: (line) => ({ label: line.text }),
     },
+    /**
+     * A line ending in a colon announces what comes after it. That is a heading,
+     * whether what follows is a list or a paragraph — `Besparelser på
+     * skoleområdet:` on its own line is nobody's body text.
+     */
     {
-      id: `${lang}.structure.listIntro`,
+      id: `${lang}.structure.colonHeading`,
       lang,
       kind: "heading",
       score: 52,
@@ -313,7 +332,7 @@ export function structuralRules(lang: DocLang): Rule[] {
         line.text.endsWith(":") &&
         line.text.length < 70 &&
         !hasBulletMarker(line.text) &&
-        nextLineIsListItem(line, ctx),
+        (nextLineOpensList(line, ctx) || standsAlone(line, ctx)),
       extract: (line) => ({ label: line.text.replace(/:$/, "").trim() }),
     },
     // The `everything else` row of §11.4. It is the expected outcome for body
@@ -356,15 +375,134 @@ export function sentenceCase(value: string, lang: DocLang): string {
 }
 
 function hasFollowingContent(line: Line, ctx: ParseContext): boolean {
-  const position = ctx.lines.findIndex((candidate) => candidate.index === line.index);
+  const position = positionOf(line, ctx);
   return position >= 0 && position < ctx.lines.length - 1;
 }
 
-function nextLineIsListItem(line: Line, ctx: ParseContext): boolean {
-  const position = ctx.lines.findIndex((candidate) => candidate.index === line.index);
+function nextLineOpensList(line: Line, ctx: ParseContext): boolean {
+  const position = positionOf(line, ctx);
   const next = position >= 0 ? ctx.lines[position + 1] : undefined;
   if (!next) return false;
-  return BULLET_MARKER.test(next.text) || ORDERED_MARKER.test(next.text);
+  if (BULLET_MARKER.test(next.text) || ORDERED_MARKER.test(next.text)) return true;
+  return lostListRun(position + 1, ctx) !== undefined;
+}
+
+/** The line is a block of its own: blank above, blank below, content after. */
+function standsAlone(line: Line, ctx: ParseContext): boolean {
+  return line.blankBefore && line.blankAfter && hasFollowingContent(line, ctx);
+}
+
+/**
+ * Array position of a line, memoised per parse. `Line.index` counts blank lines
+ * too, so it is not the position; a linear scan per rule per line is what this
+ * replaces.
+ */
+const POSITIONS = new WeakMap<Line[], Map<number, number>>();
+
+function positionOf(line: Line, ctx: ParseContext): number {
+  let index = POSITIONS.get(ctx.lines);
+  if (!index) {
+    index = new Map(ctx.lines.map((candidate, position) => [candidate.index, position]));
+    POSITIONS.set(ctx.lines, index);
+  }
+  return index.get(line.index) ?? -1;
+}
+
+/* ---------- lists whose numbering the source lost ---------- */
+
+/**
+ * Google Docs copies a numbered list to the clipboard without its numerals.
+ * What lands in the paste box is a lead-in line followed by bare sentences, and
+ * the heading heuristics then read the first of those sentences as a heading —
+ * the one reading that is certainly wrong.
+ *
+ * The signal that survives the copy is the lead-in: `… hvor vi skal i gang med`,
+ * `Punkter til drøftelse:`. Everything below reconstructs the list from that,
+ * and refuses in every case it is not sure about: a run that would chop a
+ * paragraph in half, a run of one, a run of lines that read as prose. Failing to
+ * recover leaves today's behaviour; recovering wrongly costs the user an edit,
+ * so the rule is `uncertain` and the review strip names it.
+ */
+
+/** Words that end a line which is about to open a list. */
+const LEAD_IN_WORDS: Record<DocLang, readonly string[]> = {
+  da: ["med", "følgende", "flg", "disse", "herunder", "nemlig"],
+  en: ["with", "following", "these", "namely", "including"],
+};
+
+const MAX_LEAD_IN_LENGTH = 160;
+const MIN_ITEM_LENGTH = 3;
+const MAX_ITEM_LENGTH = 120;
+const MIN_RECOVERED_ITEMS = 2;
+/** `… stilling. Den næste …` — a second sentence means a paragraph, not an item. */
+const SENTENCE_BREAK = /[.!?]["»”']?\s+\p{Lu}/u;
+const ITEM_OPENING = /^[\p{Lu}\p{N}]/u;
+
+function isListLeadIn(line: Line, lang: DocLang): boolean {
+  const text = line.text;
+  if (text.length === 0 || text.length > MAX_LEAD_IN_LENGTH) return false;
+  if (hasBulletMarker(text) || ORDERED_MARKER.test(text)) return false;
+  if (text.endsWith(":")) return true;
+  if (/[.!?,;]$/.test(text)) return false;
+  const lastWord = (lower(text, lang).split(/\s+/).at(-1) ?? "").replace(/[^\p{L}]/gu, "");
+  return LEAD_IN_WORDS[lang].includes(lastWord);
+}
+
+/** One line that could be an item whose marker went missing. */
+function looksLikeLostItem(line: Line): boolean {
+  const text = line.text;
+  if (text.length < MIN_ITEM_LENGTH || text.length > MAX_ITEM_LENGTH) return false;
+  if (line.headingLevel !== undefined) return false;
+  if (hasBulletMarker(text) || ORDERED_MARKER.test(text)) return false;
+  if (EMAIL.test(text) || URL.test(text)) return false;
+  // A trailing comma or colon is a wrapped clause; a lower-case opening is the
+  // middle of one. Neither is how anyone writes a list item.
+  if (/[,;:]$/.test(text)) return false;
+  if (!ITEM_OPENING.test(text)) return false;
+  return !SENTENCE_BREAK.test(text);
+}
+
+/**
+ * The run of marker-less items the line at `position` belongs to, or `undefined`
+ * when there is no such run.
+ *
+ * The items have to be one unbroken block of lines: a blank line between two of
+ * them means the writer wrote two things, and the block has to end where the
+ * source ends it. Both walks also stop at a lead-in, so one list's opening line
+ * is never swallowed as the previous list's last item.
+ */
+function lostListRun(
+  position: number,
+  ctx: ParseContext,
+): { start: number; end: number } | undefined {
+  const lines = ctx.lines;
+  const self = lines[position];
+  if (!self || !looksLikeLostItem(self)) return undefined;
+
+  let start = position;
+  for (let previous = lines[start - 1]; previous && !previous.blankAfter; ) {
+    if (isListLeadIn(previous, ctx.lang) || !looksLikeLostItem(previous)) break;
+    start -= 1;
+    previous = lines[start - 1];
+  }
+
+  let end = position;
+  for (let next = lines[end + 1]; next && !lines[end]?.blankAfter; ) {
+    if (isListLeadIn(next, ctx.lang) || !looksLikeLostItem(next)) break;
+    end += 1;
+    next = lines[end + 1];
+  }
+
+  if (end - start + 1 < MIN_RECOVERED_ITEMS) return undefined;
+
+  const lead = lines[start - 1];
+  if (!lead || !isListLeadIn(lead, ctx.lang)) return undefined;
+
+  // The block has to end where the run ends. Chopping a paragraph in half is a
+  // worse outcome than leaving the numbering lost.
+  if (lines[end]?.blankAfter !== true) return undefined;
+
+  return { start, end };
 }
 
 export const patterns = { EMAIL, URL, PHONE, OPEN_QUOTE, CLOSE_QUOTE };

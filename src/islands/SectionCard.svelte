@@ -11,6 +11,7 @@
   import QuoteEditor from "./QuoteEditor.svelte";
   import RichTextEditor from "./RichTextEditor.svelte";
   import TextListEditor from "./TextListEditor.svelte";
+  import Menu from "./ui/Menu.svelte";
 
   /**
    * One section — docs/PLAN.md §5.2, §5.3.
@@ -32,6 +33,10 @@
     onheading: (value: string) => void;
     onbodychange: (start: number, count: number, blocks: BodyBlock[]) => void;
     onacknowledge: (blockId: string) => void;
+    /** The parser split where the writer did not: join this section to the one above. */
+    onmergeup: () => void;
+    /** The parser read a line as a heading that was never one: put it back in the body. */
+    onheadingtotext: () => void;
     /** Lay a large structured paste out as sections, replacing this one. */
     onformatpaste: (raw: string) => void;
   }
@@ -48,6 +53,8 @@
     onheading,
     onbodychange,
     onacknowledge,
+    onmergeup,
+    onheadingtotext,
     onformatpaste,
   }: Props = $props();
 
@@ -75,6 +82,19 @@
 
   const uncertain = $derived(
     section.confidence === "low" || section.blocks.some((block) => block.confidence === "low"),
+  );
+
+  /**
+   * Naming the guess is worth more than repeating "we were unsure". A list the
+   * parser reconstructed from a missing marker is the one case where the user
+   * can check the answer at a glance, so it says which guess it made.
+   */
+  const guessedList = $derived(
+    section.blocks.some(
+      (block) =>
+        block.confidence === "low" &&
+        (block.sourceRuleId ?? "").endsWith("structure.recoveredList"),
+    ),
   );
 
   const name = $derived(section.heading?.text.trim() || t("section.untitled"));
@@ -153,15 +173,72 @@
         title="{t('section.moveDown')} (Alt+↓)"
         onclick={() => onmove(1)}>↓</button
       >
-      <button
-        type="button"
-        class="btn-ghost px-2 py-1 text-sm"
-        aria-label={t("section.remove")}
-        title={t("section.remove")}
-        onclick={() => {
-          if (confirm(t("section.removeConfirm", { name }))) onremove();
-        }}>✕</button
+
+      <!--
+        Reordering is inline because it is constant and has a keyboard twin.
+        Repairing a section — undoing a split the parser invented, demoting a
+        heading it invented, deleting the whole thing — is rare, needs words
+        rather than glyphs to be understood, and one of the three is
+        irreversible. All three live behind the same disclosure.
+      -->
+      <Menu
+        label={t("section.more")}
+        triggerLabel={t("section.more")}
+        align="right"
+        triggerClass="btn-ghost px-2 py-1 text-sm"
       >
+        {#snippet trigger()}
+          ⋯
+        {/snippet}
+
+        {#snippet children({ close })}
+          {#if section.heading}
+            <button
+              type="button"
+              role="menuitem"
+              tabindex="-1"
+              class="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface-sunken focus-ring"
+              onclick={() => {
+                close();
+                onheadingtotext();
+              }}
+            >
+              {t("section.headingToText")}
+            </button>
+          {/if}
+          <!--
+            Absent rather than disabled on the first card: a disabled button
+            cannot take focus, and the menu's arrow-key walk would appear to
+            stall on it.
+          -->
+          {#if index > 0}
+            <button
+              type="button"
+              role="menuitem"
+              tabindex="-1"
+              class="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface-sunken focus-ring"
+              onclick={() => {
+                close();
+                onmergeup();
+              }}
+            >
+              {t("section.mergeUp")}
+            </button>
+          {/if}
+          <button
+            type="button"
+            role="menuitem"
+            tabindex="-1"
+            class="block w-full border-t border-hairline px-4 py-2 text-left text-sm text-ink hover:bg-surface-sunken focus-ring"
+            onclick={() => {
+              close();
+              if (confirm(t("section.removeConfirm", { name }))) onremove();
+            }}
+          >
+            {t("section.remove")}
+          </button>
+        {/snippet}
+      </Menu>
     </div>
   </div>
 
@@ -173,8 +250,12 @@
       <span class="text-xs font-semibold uppercase tracking-wide text-muted">
         {t("review.uncertain")}
       </span>
-      <span class="flex-1 text-xs text-muted">{t("review.uncertainHint")}</span>
-      <button type="button" class="btn-ghost px-2 py-0.5 text-xs" onclick={acknowledge}> ✓ </button>
+      <span class="flex-1 text-xs text-muted">
+        {guessedList ? t("review.recoveredListHint") : t("review.uncertainHint")}
+      </span>
+      <button type="button" class="btn-ghost px-2 py-0.5 text-xs" onclick={acknowledge}>
+        ✓ {t("review.acknowledge")}
+      </button>
     </div>
   {/if}
 

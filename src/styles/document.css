@@ -135,6 +135,15 @@
   padding-left: var(--mm-5);
 }
 
+/*
+ * The preflight reset strips `list-style` from every list, so an ordered list
+ * has to ask for its numerals back. Without this a numbered list prints as
+ * indented prose, which is the one thing it must never look like.
+ */
+.nl-ol {
+  list-style: decimal;
+}
+
 .nl-ul li,
 .nl-ol li {
   margin-bottom: var(--mm-2);

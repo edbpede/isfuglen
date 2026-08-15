@@ -16,6 +16,8 @@
     children: Snippet<[{ close: () => void }]>;
     align?: "left" | "right";
     triggerClass?: string;
+    /** Names the trigger when its content is a glyph rather than words. */
+    triggerLabel?: string;
   }
 
   let {
@@ -24,6 +26,7 @@
     children,
     align = "left",
     triggerClass = "btn-secondary",
+    triggerLabel,
   }: Props = $props();
 
   let open = $state(false);
@@ -89,6 +92,8 @@
     class={triggerClass}
     aria-haspopup="menu"
     aria-expanded={open}
+    aria-label={triggerLabel}
+    title={triggerLabel}
     onclick={() => {
       open = !open;
       if (open) queueMicrotask(() => items()[0]?.focus());

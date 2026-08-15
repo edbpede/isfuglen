@@ -46,6 +46,22 @@
   let toolbarVersion = $state(0);
   /** A large structured paste waiting for the user's choice (§11.7). */
   let pendingPaste = $state<string | null>(null);
+  /**
+   * Where the pointer went down on the static stand-in, measured from that
+   * element's own top-left rather than the viewport's. The lazy mount is
+   * invisible only if the caret lands where the user aimed; sending it to the
+   * end of the body instead is the kind of small betrayal that makes an editor
+   * feel untrustworthy.
+   *
+   * Viewport coordinates would be a wrong answer waiting for a slow network.
+   * Between the pointer going down and the editor existing there is a real
+   * chunk fetch, and for its whole duration the section is an empty box inside
+   * a scrolling pane: a scroll clamp, scroll anchoring, or anything else that
+   * translates the card vertically leaves an absolute point pointing at a line
+   * the user never aimed at. An offset into the box travels with the box, so
+   * the question cannot arise.
+   */
+  let entryPoint: { left: number; top: number } | null = null;
 
   /**
    * Static render of the unfocused state — literally the preview's inline
@@ -60,6 +76,28 @@
    */
   const staticHtml = $derived(renderStatic(blocks));
 
+  /**
+   * The stand-in and the mounted editor are the same box — same width, same
+   * `px-3 py-2`, same border, same place in the same column — so an offset
+   * taken from one lands on the matching glyph in the other.
+   */
+  function placeCaret(instance: Editor, element: HTMLElement): void {
+    const point = entryPoint;
+    entryPoint = null;
+    if (point) {
+      const box = element.getBoundingClientRect();
+      const hit = instance.view.posAtCoords({
+        left: box.left + point.left,
+        top: box.top + point.top,
+      });
+      if (hit) {
+        instance.chain().focus().setTextSelection(hit.pos).run();
+        return;
+      }
+    }
+    instance.commands.focus("end");
+  }
+
   function renderStatic(source: BodyBlock[]): string {
     return source
       .map((block) => {
@@ -72,8 +110,25 @@
       .join("");
   }
 
+  /*
+   * `editor` is deliberately absent from this effect's reads. It is written
+   * below, and an effect that reads what it writes re-runs itself: the cleanup
+   * destroyed the instance it had just created, the guard saw `undefined`
+   * again, and the section spun between create and destroy without ever
+   * showing a caret. Nothing said so, either — the write lands a microtask
+   * later, so every turn is a fresh batch and the runtime's depth guard never
+   * counts past one. `mounted` and `host` are the only real inputs, each flips
+   * exactly once per mount, and tracking them alone is both correct and
+   * sufficient.
+   *
+   * Everything else the editor is built from — `blocks`, `t`, `labelledBy`,
+   * `docLang` — is read *after* the `await` and is therefore untracked. That is
+   * load-bearing, not incidental: `onUpdate` hands the parent a fresh `blocks`
+   * array on every keystroke, so hoisting `blocksToTipTapDoc(blocks)` above the
+   * import would rebuild the editor as fast as the user can type.
+   */
   $effect(() => {
-    if (!mounted || !host || editor) return;
+    if (!mounted || !host) return;
 
     const element = host;
     let instance: Editor | undefined;
@@ -133,7 +188,7 @@
       });
 
       editor = instance;
-      instance.commands.focus("end");
+      placeCaret(instance, element);
     })();
 
     return () => {
@@ -194,6 +249,10 @@
       onfocusin={() => {
         mounted = true;
       }}
+      onpointerdown={(event) => {
+        const box = event.currentTarget.getBoundingClientRect();
+        entryPoint = { left: event.clientX - box.left, top: event.clientY - box.top };
+      }}
       onclick={() => {
         mounted = true;
       }}
@@ -212,10 +271,27 @@
     margin-bottom: 0;
   }
 
+  /*
+   * The preflight reset takes the markers off every list. In the editor that
+   * would leave a list and two paragraphs looking identical, which is exactly
+   * the distinction someone repairing a parse is trying to see.
+   */
   .nl-editor :global(ul),
   .nl-editor :global(ol) {
     margin: 0 0 0.5rem;
     padding-left: 1.4rem;
+  }
+
+  .nl-editor :global(ul) {
+    list-style: disc;
+  }
+
+  .nl-editor :global(ol) {
+    list-style: decimal;
+  }
+
+  .nl-editor :global(li::marker) {
+    color: var(--c-brand);
   }
 
   .nl-editor :global(li) {

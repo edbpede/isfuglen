@@ -114,6 +114,15 @@ describe("t()", () => {
     expect(t("da", "save.saved")).toBe("Gemt kl. {time}");
   });
 
+  test("the review strip stays grammatical at a count of one", () => {
+    // §3.4: one count per sentence, because the plural machinery selects on a
+    // single `n`. `1 punkter er usikre` is what the single-sentence form gave.
+    expect(t("da", "review.doubts", { n: 1 })).toBe("Ét af dem er vi i tvivl om.");
+    expect(t("da", "review.doubts", { n: 3 })).toBe("3 af dem er vi i tvivl om.");
+    expect(t("en", "review.found", { n: 1 })).toBe("We laid out 1 section.");
+    expect(t("en", "review.found", { n: 6 })).toBe("We laid out 6 sections.");
+  });
+
   test("selects the plural form via Intl.PluralRules", () => {
     expect(t("en", "entry.charCount", { n: 1 })).toBe("1 character");
     expect(t("en", "entry.charCount", { n: 2 })).toBe("2 characters");

@@ -63,14 +63,130 @@ test("the engine's decisions are all correctable", async ({ page }) => {
     page.getByRole("region", { name: "Forhåndsvisning af nyhedsbrevet" }).locator(".nl-agenda"),
   ).toContainText("Godkendelse af sidste referat");
 
-  // A section can be deleted.
+  // A section can be deleted, from the card's own actions menu.
+  const last = page.locator("[data-section-card]").last();
+  await last.getByRole("button", { name: "Flere handlinger" }).click();
   page.once("dialog", (dialog) => dialog.accept());
-  await page
-    .locator("[data-section-card]")
-    .last()
-    .getByRole("button", { name: "Slet afsnittet" })
-    .click();
+  await last.getByRole("menuitem", { name: "Slet afsnittet" }).click();
   await expect(page.locator("[data-section-card]")).toHaveCount(5);
+});
+
+test("a heading the parser invented can be undone in two named clicks", async ({ page }) => {
+  await page.goto("/");
+  // A lead-in whose list lost its numbering on the way out of Google Docs, with
+  // one orphan short enough that the short-heading heuristic claims it.
+  await formatNotes(
+    page,
+    [
+      "Nyhedsbrev til klubben",
+      "",
+      "Vi holder MED-møde på fredag.",
+      "",
+      "Nyt fra kredsen",
+      "Kredsen har udsendt Isfuglen med en orientering om besparelserne.",
+      "",
+      "Arbejdstid",
+      "Vi talte længe om forberedelsestiden, og alle var enige om at følge op.",
+      "",
+    ].join("\n"),
+  );
+
+  const card = page.locator("[data-section-card]").last();
+  await expect(card.getByLabel("Overskrift", { exact: true })).toHaveValue("Arbejdstid");
+
+  await card.getByRole("button", { name: "Flere handlinger" }).click();
+  await card.getByRole("menuitem", { name: "Gør overskriften til tekst" }).click();
+  await expect(card.getByLabel("Overskrift", { exact: true })).toHaveValue("");
+
+  const preview = page.getByRole("region", { name: "Forhåndsvisning af nyhedsbrevet" });
+  await expect(preview).toContainText("Arbejdstid");
+
+  // And the orphaned section joins the one it was split out of.
+  const before = await page.locator("[data-section-card]").count();
+  await card.getByRole("button", { name: "Flere handlinger" }).click();
+  await card.getByRole("menuitem", { name: "Slå sammen med afsnittet ovenfor" }).click();
+  await expect(page.locator("[data-section-card]")).toHaveCount(before - 1);
+  await expect(preview).toContainText("Arbejdstid");
+
+  // Both bodies now live under the heading the writer did mean.
+  const merged = page.locator("[data-section-card]").last();
+  await expect(merged.getByLabel("Overskrift", { exact: true })).toHaveValue("Nyt fra kredsen");
+  await expect(merged).toContainText("Arbejdstid");
+});
+
+test("clicking an unfocused section body opens it with the caret where the pointer landed", async ({
+  page,
+}) => {
+  // Two wrapped paragraphs, so the target word sits well inside the body: the
+  // fallback drops the caret at the very end, and only an interior target can
+  // tell the two outcomes apart.
+  const paragraph = [
+    "Vi drøftede forberedelsestiden indgående på mødet, og flere kolleger fortalte",
+    "om arbejdstidsaftalen og om, hvordan medarbejderrepræsentanterne oplever",
+    "presset i hverdagen på skolerne. Kredsen følger op på næste møde, og",
+    "formanden lovede et udkast til en arbejdsgruppe inden efterårsferien.",
+  ].join(" ");
+
+  await page.goto("/");
+  await formatNotes(
+    page,
+    ["Nyhedsbrev til klubben", "", "Nyt fra kredsen", paragraph, "", paragraph, ""].join("\n"),
+  );
+
+  const card = page.locator("[data-section-card]").last();
+  const stand = card.locator("button.nl-editor");
+  await stand.scrollIntoViewIfNeeded();
+
+  // Measured from the rendered layout rather than guessed: the point has to be
+  // a real glyph in the static stand-in for the click to mean anything.
+  const point = await stand.evaluate((element, word) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = (node.textContent ?? "").indexOf(word);
+      if (index === -1) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + word.length);
+      const box = range.getBoundingClientRect();
+      return { x: Math.round(box.left) + 1, y: Math.round(box.top + box.height / 2) };
+    }
+    return null;
+  }, "formanden");
+  // Thrown rather than asserted: a silent fallback click on the viewport corner
+  // would report a broken fixture as a mount failure.
+  if (!point) throw new Error('the static stand-in never rendered the word "formanden"');
+
+  await page.mouse.click(point.x, point.y);
+
+  // The mount itself is under test: an `$effect` that reads the state it writes
+  // destroys each instance as it creates it, and the section stays a dead
+  // rectangle no keystroke ever reaches.
+  const surface = card.locator(".nl-editor-surface");
+  await expect(surface).toBeVisible();
+  await expect(surface).toBeFocused();
+
+  // And the caret is where the user aimed, not at the end of the body. Scoped
+  // to the paragraph that was clicked: the two paragraphs are identical, so an
+  // assertion over the whole surface would accept a miss of exactly one
+  // paragraph — which is the shape a layout shift during the mount would take.
+  await page.keyboard.type("HER");
+  await expect(surface.locator("p").first()).toContainText("HERformanden");
+  await expect(surface).not.toContainText("efterårsferien.HER");
+});
+
+test("the greeting field is big enough to hold a greeting", async ({ page }) => {
+  await page.goto("/");
+  await formatNotes(page);
+
+  const intro = page.getByLabel("Indledning", { exact: true });
+  const initial = (await intro.boundingBox())?.height ?? 0;
+  // Five rows of the body face, not two.
+  expect(initial).toBeGreaterThan(100);
+
+  await intro.fill(`${"Kære kolleger. ".repeat(40)}`);
+  await expect(async () => {
+    expect((await intro.boundingBox())?.height ?? 0).toBeGreaterThan(initial);
+  }).toPass();
 });
 
 test("a blank newsletter is a valid starting point", async ({ page }) => {
