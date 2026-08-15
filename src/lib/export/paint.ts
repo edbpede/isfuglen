@@ -198,6 +198,7 @@ interface TextStyle {
   fontSize: string;
   lineHeight: string;
   letterSpacing: string;
+  textRendering: string;
 }
 
 /**
@@ -245,6 +246,9 @@ class Measurer {
     element.style.letterSpacing = style.letterSpacing;
     element.style.fontKerning = "none";
     element.style.fontVariantLigatures = "none";
+    // Copied rather than assumed: a probe laid out with hinted advances would
+    // measure a baseline offset the real text does not have.
+    element.style.textRendering = style.textRendering;
     return element;
   }
 
@@ -296,6 +300,7 @@ function styleKey(style: TextStyle): string {
     style.fontSize,
     style.lineHeight,
     style.letterSpacing,
+    style.textRendering,
   ].join("|");
 }
 
@@ -307,6 +312,7 @@ function textStyleOf(style: CSSStyleDeclaration): TextStyle {
     fontSize: style.fontSize,
     lineHeight: style.lineHeight,
     letterSpacing: style.letterSpacing,
+    textRendering: style.textRendering,
   };
 }
 

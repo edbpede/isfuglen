@@ -49,9 +49,18 @@
    * construction instead of within a tolerance, and removes one more thing four
    * layout engines can disagree about. Source Sans 3's Latin kerning is light
    * and "fi" as two glyphs is no loss at 10.5 pt.
+   *
+   * `text-rendering: geometricPrecision` closes the same gap from the other
+   * side. Without it an engine may lay text out with hinted, whole-pixel glyph
+   * advances at body sizes -- measured on Linux, a Danish sample line comes out
+   * 2.2 % wider than the sum of the font's design advances -- and no
+   * per-line positioning recovers an error that accumulates inside the line.
+   * It asks for exact metrics, which is what a document destined for print
+   * wants anyway.
    */
   font-kerning: none;
   font-variant-ligatures: none;
+  text-rendering: geometricPrecision;
 }
 
 .nl-doc * {
@@ -518,6 +527,7 @@
   text-align: left;
   font-kerning: none;
   font-variant-ligatures: none;
+  text-rendering: geometricPrecision;
 }
 
 .pagedjs_page .nl-footer {

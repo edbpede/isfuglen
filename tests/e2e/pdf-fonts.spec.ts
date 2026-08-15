@@ -70,7 +70,7 @@ test.describe("PDF font pipeline", () => {
       const font = pdf.embedFont(await loadFace(request, face));
 
       for (const size of SIZES_PX) {
-        const measured = await page.evaluate(
+        const probe = await page.evaluate(
           async ({ family, weight, style, text, size }) => {
             const spec = `${style} ${weight} ${size}px ${JSON.stringify(family)}`;
             await document.fonts.load(spec, text);
@@ -91,11 +91,15 @@ test.describe("PDF font pipeline", () => {
             probe.style.letterSpacing = "0";
             probe.style.fontKerning = "none";
             probe.style.fontVariantLigatures = "none";
+            probe.style.textRendering = "geometricPrecision";
 
             document.body.appendChild(probe);
             const width = probe.getBoundingClientRect().width;
             probe.remove();
-            return width;
+            // Reported alongside the width so a failure says whether the face
+            // was even loaded, rather than leaving "wrong font" and "hinted
+            // advances" indistinguishable.
+            return { width, loaded: document.fonts.check(spec) };
           },
           {
             family: FAMILY_STACK[face.family],
@@ -107,10 +111,10 @@ test.describe("PDF font pipeline", () => {
         );
 
         const computed = font.getTextWidth(SAMPLE, size);
-        const drift = Math.abs((computed - measured) / measured) * 100;
+        const drift = Math.abs((computed - probe.width) / probe.width) * 100;
         expect(
           drift,
-          `${faceStem(face)} at ${size}px: browser ${measured.toFixed(3)} vs embedded ${computed.toFixed(3)}`,
+          `${faceStem(face)} at ${size}px: browser ${probe.width.toFixed(3)} vs embedded ${computed.toFixed(3)} (face loaded: ${probe.loaded})`,
         ).toBeLessThan(TOLERANCE_PERCENT);
       }
     }
@@ -132,11 +136,14 @@ test.describe("PDF font pipeline", () => {
       const result = {
         kerning: style.fontKerning,
         ligatures: style.fontVariantLigatures,
+        rendering: style.textRendering,
       };
       article.remove();
       return result;
     });
     expect(applied.kerning).toBe("none");
     expect(applied.ligatures).toBe("none");
+    // Exact metrics rather than hinted, whole-pixel advances.
+    expect(applied.rendering.toLowerCase()).toBe("geometricprecision");
   });
 });

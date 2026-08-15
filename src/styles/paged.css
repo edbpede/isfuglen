@@ -52,6 +52,7 @@
     padding-top: 3mm;
     font-kerning: none;
     font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
   }
 
   @bottom-right {
@@ -63,6 +64,7 @@
     padding-top: 3mm;
     font-kerning: none;
     font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
   }
 }
 
