@@ -28,6 +28,19 @@ aspect ratio. It runs as part of `bun run build`. The DOCX writer reads that
 file and computes its `ImageRun` dimensions from the same ratio, so distortion
 is impossible by construction.
 
+## The drop-in contract
+
+A replacement must be an SVG that declares a `viewBox` and draws with `<path>`
+elements only: no `<rect>`, `<circle>`, `<use>`, no `transform` attribute
+anywhere, and no elliptical arc (`A`/`a`) in any path. `src/lib/export/svg-path.ts`
+converts the mark into PDF path operators and refuses anything outside that list
+by name, because a replacement that draws the wrong shape is worse than one that
+refuses to export. Fills may come from a `fill` attribute or from a `<style>`
+rule on a class; both are resolved through the cascade.
+
+`scripts/build-logo-png.ts` applies the same standard on the raster side and
+fails the build rather than producing a distorted PNG.
+
 ## Rules that apply to the mark
 
 - The aspect ratio comes from the SVG's `viewBox` and is never overridden. Width

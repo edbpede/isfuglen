@@ -1,6 +1,7 @@
 # Replacing the print-dialog PDF export
 
-Status: recommendation. No implementation in this branch.
+Status: implemented. The architecture below was adopted; §8 records what changed
+between the recommendation and the code, and why.
 
 ## 1. What the current path does
 
@@ -271,3 +272,99 @@ and it is the one piece that cannot be discovered by reading the DOM.
 That assertion is the whole gate. If it holds, the painter can position text per
 line with no horizontal scaling and the export matches the preview exactly. If it
 fails, it fails now, in a 60-line test, instead of after a 500-line painter.
+
+## 8. What the implementation changed, and why
+
+The architecture held. Five things did not survive contact, and each is worth
+recording because each was a load-bearing assumption above.
+
+### 8.1 The writer is `@libpdf/core`, not pdf-lib
+
+§6 recommended pdf-lib. `@libpdf/core` was chosen instead, measured at **239 KB
+gzipped as a lazy chunk**. pdf-lib's last release was 2021-11-06 and it cannot
+embed a custom TrueType face at all without `@pdf-lib/fontkit`, which takes the
+same bundle from 176 KB to 500 KB — larger than the option it was meant to beat.
+`@libpdf/core` parses and subsets TrueType itself, writes CIDFontType2 with a
+`ToUnicode` CMap natively, and exposes a raw operator namespace, which the
+painter needs for `Tc`.
+
+### 8.2 Variable-font instancing does not exist, in any library
+
+`EmbedFontOptions` in `@libpdf/core` advertises a `variations` field. Reading the
+implementation: `EmbeddedFont.fromBytes(data, _options)` discards its options
+argument, and the package parses `fvar` but ships no `gvar` interpolation. So
+handing it a variable TTF embeds the default instance and renders every weight at
+400 — the exact defect measured in the spike.
+
+The fallback in §5.2 was taken: Fontsource publishes a **static** release of both
+families, instanced upstream from the same variable source.
+`scripts/build-pdf-fonts.ts` decodes those woff2 containers with `wawoff2`, which
+is a container decode rather than a font-object round trip, and asserts what it
+wrote — required tables, no `fvar`, an `OS/2` `usWeightClass` matching the face,
+and Danish glyph coverage.
+
+The metric-parity gate then passed: measured across 14, 40 and 200 px, the worst
+disagreement between the browser's variable instance and the embedded static face
+is **0.07 %**, on Source Serif 4.
+
+### 8.3 Kerning had to go, and that is the interesting one
+
+A PDF text-showing operator maps one code point to one glyph. It applies no
+kerning pairs and no ligature substitutions. Measured on a Danish sample line:
+with kerning on, the browser sets the line **1.18 % narrower** than the sum of
+the advances the PDF can address, and **1.43 %** narrower in italic — about
+1.3 mm adrift by the end of a full measure. No amount of per-line repositioning
+recovers that, because the error accumulates _within_ the line.
+
+`document.css` therefore sets `font-kerning: none` and
+`font-variant-ligatures: none`. This is not a compromise in the export's favour:
+it is the condition under which preview and export are identical by construction
+rather than within a tolerance, and it removes one more thing four layout engines
+can disagree about.
+
+### 8.4 Baselines are measured, not derived
+
+§7.3 of the implementation plan proposed computing the baseline from the font's
+ascender, descender and units-per-em. Measured, that formula is engine-specific:
+for the same 14 px line at line-height 1.55, the distance from a `Range` rect's
+top to the baseline is **14.000 in Chromium, 15.000 in Firefox and 14.327 in
+WebKit**, because each engine derives the rect from a different metric. Every one
+of those is correct and none is a constant the painter could carry.
+
+So the painter measures it: a zero-sized inline-block aligned to the baseline
+sits exactly on it by definition. One measurement per distinct text style, then
+applied to every line drawn in that style.
+
+### 8.5 "Byte-identical in every browser" is not achievable, and should not be
+
+The goal as originally stated was one file, identical from Chrome, Firefox,
+Safari and Edge. That is not attainable by an approach that transcribes the
+browser's own layout, and measurement shows why: Chromium and WebKit ship Danish
+hyphenation patterns and break long compounds mid-word; Firefox, in the build
+tested, does not and breaks at spaces instead. The exports differ because the
+_previews_ differ.
+
+A byte-identical file would require a second layout engine inside the app — which
+is exactly what §4's Option 1 was rejected for, and it would then match no
+browser's preview at all. The property that is both achievable and more useful is
+the one now asserted: **the export matches the preview in the browser that
+produced it, exactly**, and across engines the page count, the words and their
+order, the embedded text, the vector mark and the absence of raster are all
+identical. `tests/e2e/pdf-cross-browser.spec.ts` states it in those terms.
+
+### 8.6 Two smaller findings
+
+- **`✓` and `■` were never embeddable.** Neither U+2713 nor U+25A0 is inside any
+  `unicode-range` in `fonts.css`, so the browser has always drawn the decision
+  tick and the action square from a system fallback — a different shape on macOS
+  and on Windows. They are geometry now. The same applies to U+2010, the hyphen
+  CSS inserts at a hyphenation break, which is absent from Google's `latin`
+  subset of both families; `hyphenate-character` is declared as U+002D instead
+  and the painter reads the declared value back.
+- **The CSP always blocks inline styles.** `astro.config.mjs` claimed that
+  `build.inlineStylesheets: "never"` would leave `'unsafe-inline'` effective.
+  It does not: Astro emits its own `astro-island{display:contents}` rule inline,
+  so a style hash is always present and browsers ignore `'unsafe-inline'` beside
+  one. Run-time styling has to go through the CSSOM, which is why the painter
+  lifts the brand SVG's `<style>` rules into a constructable stylesheet in a
+  shadow root.
