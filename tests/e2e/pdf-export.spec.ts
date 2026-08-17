@@ -176,6 +176,81 @@ test.describe("PDF export", () => {
     expect(extracted).not.toContain("\uFFFD");
   });
 
+  test("a line and a footer spanning both subsets are drawn in both faces", async ({ page }) => {
+    // `latin` and `latin-ext` are disjoint: neither face can encode the other's
+    // characters, so a string covering both has to become one run per subset.
+    // Two paths reach that split with no text node to range over -- a line
+    // whose whitespace collapsed, and generated content -- and handing either
+    // one whole to the first character's face aborts the export with
+    // `UnembeddableTextError`, which is a failed download rather than a
+    // cosmetic defect.
+    await page.getByLabel(/Dine noter|Your notes/).waitFor({ state: "detached" });
+    await page.reload();
+    await formatNotes(
+      page,
+      // The double space collapses, so the drawn string is shorter than the one
+      // the browser laid out and its offsets no longer address the node.
+      `${DANISH_NOTES}\nKolleger\nVi bød velkommen til Michał.  Han kommer fra Wrocław.\n`,
+    );
+    await page.locator(".pagedjs_page").first().waitFor();
+
+    // The running footer is a `::after` on a Paged.js margin box: generated
+    // content, and the second path to the same split.
+    await page.locator("#doc-organisation").fill("Ishøj Lærerkreds");
+    await page.locator("#doc-footer").fill("Michał Wróbel");
+    // The footer is `content` on a margin box, so it has no text to assert on;
+    // the computed value is what the painter itself reads.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const box = document.querySelector(
+            ".pagedjs_page .pagedjs_margin-bottom-left .pagedjs_margin-content",
+          );
+          return box ? getComputedStyle(box, "::after").content : "";
+        }),
+      )
+      .toContain("Wróbel");
+
+    const pdf = await exportPdf(page);
+    const runs = pdf.extractedRuns();
+    const text = runs.map((run) => run.text).join("");
+
+    // Every character survives, through whichever face carries its subset.
+    for (const word of ["Michał", "Wrocław", "Wróbel", "Ishøj"]) {
+      expect(text, `missing ${word}`).toContain(word);
+    }
+    expect(text).not.toContain("\uFFFD");
+
+    // Splitting is only half of it: the runs have to advance across the page
+    // rather than stack at its left edge, which is what measuring the prefix
+    // before each one buys.
+    // Taken contiguously from the anchor rather than by baseline alone: y is
+    // per page, and a run on another page can share it.
+    const start = runs.findIndex((run) => run.text.startsWith("Vi bød velkommen til Micha"));
+    expect(start, "the mixed-subset line was not drawn").toBeGreaterThanOrEqual(0);
+    const baseline = (runs[start] as (typeof runs)[number]).y;
+    let end = start;
+    while (
+      end + 1 < runs.length &&
+      Math.abs((runs[end + 1] as (typeof runs)[number]).y - baseline) < 0.5
+    ) {
+      end += 1;
+    }
+    const line = runs.slice(start, end + 1);
+
+    expect(line.length, "the line was not split per subset").toBeGreaterThan(1);
+    expect(line.map((run) => run.text).join("")).toBe(
+      "Vi bød velkommen til Michał. Han kommer fra Wrocław.",
+    );
+    for (let index = 1; index < line.length; index += 1) {
+      const previous = line[index - 1] as (typeof line)[number];
+      const current = line[index] as (typeof line)[number];
+      expect(current.x, `run ${index} does not advance past the one before it`).toBeGreaterThan(
+        previous.x,
+      );
+    }
+  });
+
   test("the mark is vector, in the brand navy", async ({ page }) => {
     const pdf = await exportPdf(page);
 

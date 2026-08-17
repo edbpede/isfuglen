@@ -631,7 +631,8 @@ function paintTextNode(node: Text, parent: Element, style: CSSStyleDeclaration, 
   const weight = Number.parseInt(style.fontWeight, 10) || 400;
   const slant = styleOf(style.fontStyle);
   const letterSpacing = style.letterSpacing === "normal" ? 0 : px(style.letterSpacing) * PX_TO_PT;
-  const baselineOffset = ctx.measure.baselineOffset(textStyleOf(style));
+  const textStyle = textStyleOf(style);
+  const baselineOffset = ctx.measure.baselineOffset(textStyle);
   const language = (parent.closest("[lang]") as HTMLElement | null)?.lang || "da";
 
   const document = node.ownerDocument;
@@ -651,22 +652,25 @@ function paintTextNode(node: Text, parent: Element, style: CSSStyleDeclaration, 
 
     const baseline = toY(ctx, line.rect.top + baselineOffset);
     const runs = subsetRuns(drawn);
+    const metrics = {
+      y: baseline,
+      family,
+      weight,
+      slant,
+      size,
+      colour: rgb(colour),
+      charSpacing: letterSpacing,
+    };
 
     // The common case: one line, one subset, one operator, positioned at the
     // left edge the browser measured.
+    //
+    // Normalising whitespace or applying `text-transform` can change the
+    // string's length, and the offsets below would then address the wrong
+    // characters. Such a line is measured instead of ranged, but it is still
+    // split per subset, because one operator can only carry one face.
     if (runs.length === 1 || drawn.length !== trimmed.length + suffix.length) {
-      pushRun(ctx, {
-        text: drawn,
-        subset: runs[0]?.subset,
-        x: toX(ctx, line.rect.left),
-        y: baseline,
-        family,
-        weight,
-        slant,
-        size,
-        colour: rgb(colour),
-        charSpacing: letterSpacing,
-      });
+      pushSubsetRuns(ctx, textStyle, drawn, line.rect.left, metrics);
       return;
     }
 
@@ -682,16 +686,10 @@ function paintTextNode(node: Text, parent: Element, style: CSSStyleDeclaration, 
       range.setEnd(node, Math.min(to, node.data.length));
       const rect = range.getClientRects()[0];
       pushRun(ctx, {
+        ...metrics,
         text: run.text,
         subset: run.subset,
         x: toX(ctx, rect ? rect.left : line.rect.left),
-        y: baseline,
-        family,
-        weight,
-        slant,
-        size,
-        colour: rgb(colour),
-        charSpacing: letterSpacing,
       });
     }
   });
@@ -730,6 +728,47 @@ function pushRun(ctx: PageContext, run: Run): void {
     color: run.colour,
     charSpacing: run.charSpacing,
   });
+}
+
+/**
+ * Draws a string that has no node to range over, one operator per subset.
+ *
+ * A face carries one subset's glyphs, so a string that spans both has to be
+ * split: handing `latin-ext` characters to the `latin` face makes the writer
+ * reject them and abort the whole export. Generated content has no text node,
+ * and a line whose whitespace collapsed no longer maps to one, so neither can
+ * be placed from a `Range`.
+ *
+ * The offset of a run is therefore the measured width of everything before it,
+ * which holds because `document.css` turns kerning and ligatures off and the
+ * probe in `Measurer` matches it -- the same property the advance-width gate in
+ * `tests/e2e/pdf-fonts.spec.ts` already relies on.
+ */
+function pushSubsetRuns(
+  ctx: PageContext,
+  textStyle: TextStyle,
+  text: string,
+  left: number,
+  rest: Omit<Run, "text" | "subset" | "x">,
+): void {
+  const runs = subsetRuns(text);
+  if (runs.length <= 1) {
+    pushRun(ctx, { ...rest, text, subset: runs[0]?.subset, x: toX(ctx, left) });
+    return;
+  }
+
+  let offset = 0;
+  for (const run of runs) {
+    const prefix = text.slice(0, offset);
+    offset += run.text.length;
+    if (run.text.trim().length === 0) continue;
+    pushRun(ctx, {
+      ...rest,
+      text: run.text,
+      subset: run.subset,
+      x: toX(ctx, left + ctx.measure.width(textStyle, prefix)),
+    });
+  }
 }
 
 /**
@@ -949,10 +988,7 @@ function paintPseudoText(
   // sits the measured distance below it, exactly as for a real line.
   const baseline = toY(ctx, box.top + ctx.measure.baselineOffset(textStyle));
 
-  pushRun(ctx, {
-    text,
-    subset: subsetRuns(text)[0]?.subset,
-    x: toX(ctx, left),
+  pushSubsetRuns(ctx, textStyle, text, left, {
     y: baseline,
     family: familyOf(style.fontFamily),
     weight: Number.parseInt(style.fontWeight, 10) || 400,
