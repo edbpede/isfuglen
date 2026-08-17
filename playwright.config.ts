@@ -25,10 +25,29 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /pdf-cross-browser\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         permissions: ["clipboard-read", "clipboard-write"],
       },
+    },
+    /**
+     * The PDF export compared across Chromium, Firefox and WebKit.
+     *
+     * It launches all three engines itself rather than running as three
+     * projects, because the assertion is a comparison *between* them and
+     * Playwright gives projects no way to share a result.
+     *
+     * It therefore has to run alone: three extra browsers alongside a fully
+     * parallel suite starve each other, and the symptom is a test that passes
+     * in isolation and hangs in the suite. `dependencies` sequences it after
+     * the main project instead of adding a knob nobody would remember.
+     */
+    {
+      name: "engines",
+      testMatch: /pdf-cross-browser\.spec\.ts/,
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {

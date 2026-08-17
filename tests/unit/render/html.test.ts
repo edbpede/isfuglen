@@ -85,6 +85,32 @@ describe("document rendering", () => {
     }
   });
 
+  test("markers are real elements, not CSS generated content", () => {
+    // A CSS counter, a `::marker` box and a `content` string are all unreadable
+    // from the DOM, so the PDF export cannot transcribe them. Emitting them as
+    // elements is what lets one renderer keep serving preview, print and export.
+    expect(html).toContain('<span class="nl-agenda-number">1</span>');
+    expect(html).toContain('<span class="nl-list-number">1.</span>');
+    expect(html).toContain('class="nl-decision-mark"');
+  });
+
+  test("the decision tick is geometry rather than a glyph nothing embeds", () => {
+    // U+2713 sits outside every `unicode-range` in fonts.css, so it came from a
+    // system fallback that differs by platform.
+    expect(html).not.toContain("\u2713");
+    expect(html).not.toContain("\u25a0");
+    expect(html).toMatch(/<svg class="nl-decision-mark" viewBox="0 0 12 12"/);
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  test("ordered lists number themselves so a page split cannot restart them", () => {
+    const numbers = [...html.matchAll(/<span class="nl-list-number">(\d+)\.<\/span>/g)].map(
+      (match) => match[1],
+    );
+    expect(numbers.length).toBeGreaterThan(1);
+    expect(numbers.slice(0, 2)).toEqual(["1", "2"]);
+  });
+
   test("generated labels come from the label pack, not the user's text", () => {
     expect(html).toContain(">Dagsorden<");
     expect(html).toContain(">Beslutninger<");

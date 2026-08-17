@@ -114,6 +114,22 @@ function label(labels: DocumentLabels, key: keyof DocumentLabels): string {
   return escapeHtml(labels[key]);
 }
 
+/**
+ * The decision tick, as a filled path rather than U+2713.
+ *
+ * `✓` is outside every `unicode-range` in `src/styles/fonts.css`, so the browser
+ * has always drawn it from whatever the operating system offers — which is a
+ * different shape on macOS and on Windows, and is not a face the PDF export can
+ * embed. Geometry renders identically everywhere and transcribes directly into
+ * PDF path operators.
+ *
+ * Straight lines only, so `src/lib/export/svg-path.ts` converts it with the
+ * same code it uses for the brand mark.
+ */
+const CHECK_MARK =
+  '<svg class="nl-decision-mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false">' +
+  '<path d="M4.6 9.9 L1 6.3 L2.4 4.9 L4.6 7.1 L9.6 2.1 L11 3.5 Z" /></svg>';
+
 function blockAttrs(block: Block, options: RenderOptions): string {
   if (!options.interactive) return "";
   const uncertain = block.confidence === "low" ? ' data-confidence="low"' : "";
@@ -124,7 +140,7 @@ function blockAttrs(block: Block, options: RenderOptions): string {
 
 function renderAgenda(block: AgendaBlock, labels: DocumentLabels, options: RenderOptions): string {
   const items = block.items
-    .map((item) => {
+    .map((item, index) => {
       const presenter = item.presenter
         ? `<span class="nl-agenda-presenter">${escapeHtml(item.presenter)}</span>`
         : "";
@@ -132,7 +148,11 @@ function renderAgenda(block: AgendaBlock, labels: DocumentLabels, options: Rende
         typeof item.minutes === "number"
           ? `<span class="nl-agenda-minutes">${item.minutes} ${label(labels, "minutes")}</span>`
           : "";
-      return `<li class="nl-agenda-item"><span class="nl-agenda-text">${escapeHtml(item.text)}</span>${presenter}${minutes}</li>`;
+      // The numeral is a real element, not `content: counter(nl-agenda)`. A CSS
+      // counter is unreadable from the DOM — `getComputedStyle` hands back the
+      // unresolved `counter()` token — so the export could not transcribe it,
+      // and `list-style: none` costs the list its semantics in WebKit anyway.
+      return `<li class="nl-agenda-item"><span class="nl-agenda-number">${index + 1}</span><span class="nl-agenda-text">${escapeHtml(item.text)}</span>${presenter}${minutes}</li>`;
     })
     .join("");
   return `<div class="nl-agenda"${blockAttrs(block, options)}><p class="nl-block-label">${escapeHtml(block.title ?? labels.agenda)}</p><ol class="nl-agenda-list">${items}</ol></div>`;
@@ -144,7 +164,7 @@ function renderDecisions(
   options: RenderOptions,
 ): string {
   const items = block.items
-    .map((item) => `<li class="nl-decision-item">${renderInline(item)}</li>`)
+    .map((item) => `<li class="nl-decision-item">${CHECK_MARK}${renderInline(item)}</li>`)
     .join("");
   return `<div class="nl-decisions"${blockAttrs(block, options)}><p class="nl-block-label">${escapeHtml(block.title ?? labels.decisions)}</p><ul class="nl-decision-list">${items}</ul></div>`;
 }
@@ -163,7 +183,11 @@ function renderActions(
       const due = item.due
         ? `<span class="nl-action-due">${label(labels, "due")} ${escapeHtml(formatDate(item.due, lang, "short"))}</span>`
         : "";
-      const meta = owner || due ? `<span class="nl-action-meta">${owner}${due}</span>` : "";
+      // The separator is text rather than `::before { content: " · " }` so it is
+      // selectable, copyable and transcribable into the PDF.
+      const separator = owner && due ? '<span class="nl-action-sep"> · </span>' : "";
+      const meta =
+        owner || due ? `<span class="nl-action-meta">${owner}${separator}${due}</span>` : "";
       return `<li class="nl-action-item"><span class="nl-action-task">${renderInline(item.task)}</span>${meta}</li>`;
     })
     .join("");
@@ -232,10 +256,21 @@ export function renderBlock(
     case "paragraph":
       return `<p class="nl-p"${blockAttrs(block, options)}>${renderInline(block.content)}</p>`;
     case "list": {
+      if (block.ordered) {
+        // Explicit numerals, not `::marker`. A marker box has no node, no client
+        // rect and no readable content, so the export cannot transcribe one; and
+        // because these are literal text, a list Paged.js splits across a page
+        // break keeps its numbering instead of restarting.
+        const items = block.items
+          .map(
+            (item, index) =>
+              `<li><span class="nl-list-number">${index + 1}.</span>${renderInline(item)}</li>`,
+          )
+          .join("");
+        return `<ol class="nl-ol"${blockAttrs(block, options)}>${items}</ol>`;
+      }
       const items = block.items.map((item) => `<li>${renderInline(item)}</li>`).join("");
-      return block.ordered
-        ? `<ol class="nl-ol"${blockAttrs(block, options)}>${items}</ol>`
-        : `<ul class="nl-ul"${blockAttrs(block, options)}>${items}</ul>`;
+      return `<ul class="nl-ul"${blockAttrs(block, options)}>${items}</ul>`;
     }
     case "agenda":
       return renderAgenda(block, labels, options);

@@ -18,8 +18,16 @@ const ASSETS = join(DIST, "_astro");
 /** Kilobytes, gzipped, of everything the workspace route loads up front. */
 const INITIAL_BUDGET_KB = 160;
 
-/** Chunks that must stay lazy. Their names come from `manualChunks`. */
-const LAZY = ["pagedjs", "docx", "editor", "schema"];
+/**
+ * Chunks that must stay lazy.
+ *
+ * The dependency names come from `manualChunks` in astro.config.mjs; `paint`
+ * and `write` are this repository's own modules, named by Vite after the file,
+ * and they are only ever reached through the export's dynamic import. Listing
+ * them keeps the initial figure honest — and if a refactor ever makes one of
+ * them statically reachable, its chunk disappears and this fails.
+ */
+const LAZY = ["pagedjs", "libpdf", "paint", "write", "docx", "editor", "schema"];
 
 interface Chunk {
   name: string;

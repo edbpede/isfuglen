@@ -40,6 +40,9 @@
    * preview. Both render empty or zero. The document's own footer text and its
    * page total are things this app knows for certain, so it states them.
    */
+  /* `font-kerning` and `font-variant-ligatures` for the same reason as
+     `.nl-doc` in document.css: the margin boxes are drawn by the same painter,
+     and they do not inherit from the page content. */
   @bottom-left {
     content: var(--nl-footer, "");
     font-family: "Source Sans 3 Variable", system-ui, sans-serif;
@@ -47,6 +50,9 @@
     color: #4a5262;
     vertical-align: top;
     padding-top: 3mm;
+    font-kerning: none;
+    font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
   }
 
   @bottom-right {
@@ -56,6 +62,9 @@
     color: #4a5262;
     vertical-align: top;
     padding-top: 3mm;
+    font-kerning: none;
+    font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
   }
 }
 

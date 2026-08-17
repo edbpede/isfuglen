@@ -101,8 +101,8 @@ describe("message catalogs", () => {
 
 describe("t()", () => {
   test("resolves a key in the requested language", () => {
-    expect(t("da", "export.pdf")).toBe("Udskriv eller gem som PDF");
-    expect(t("en", "export.pdf")).toBe("Print or save as PDF");
+    expect(t("da", "export.pdf")).toBe("Hent PDF");
+    expect(t("en", "export.pdf")).toBe("Download PDF");
   });
 
   test("interpolates {vars} as text", () => {

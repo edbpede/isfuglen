@@ -223,17 +223,16 @@ types_or = ["ts", "tsx", "javascript", "jsx", "json", "css"]
 groups = ["ci"]
 
 # Prettier owns Astro and Svelte template markup, plus Markdown docs.
-# `docs/PLAN.md` is excluded on the same grounds as LICENSE and `.augment/**`
-# above: it is authored normative text whose tables, diagrams and hand-set line
-# breaks carry meaning. Reflowing it rewrites ~1600 lines and communicates
-# nothing. `.prettierignore` carries the same entry for direct invocations.
+#
+# The `docs/PLAN.md` exclusion is gone with the file it named: the plan was
+# removed in `chore: remove docs/PLAN.md`, and `check-useless-excludes` fails on
+# a pattern that matches nothing. `.prettierignore` drops the same entry.
 [[repos.hooks]]
 id = "prettier"
 name = "Format Astro, Svelte and Markdown with Prettier"
 entry = "bunx --bun prettier --write --ignore-unknown"
 language = "system"
 types_or = ["astro", "svelte", "markdown"]
-exclude = { glob = ["docs/PLAN.md"] }
 groups = ["ci"]
 
 # `astro check` is the only thing that type-checks .astro files; plain tsc ignores
