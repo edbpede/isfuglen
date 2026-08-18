@@ -111,8 +111,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Biome owns TS/JS/JSON/CSS here; Prettier owns .astro/.svelte/.md and is
-      # run by the prek hook below, so both formatters are covered.
+      # Biome is the only formatter and linter. It formats TS/JS/JSON/CSS and lints
+      # the script blocks inside .astro/.svelte. Nothing formats .astro/.svelte
+      # or Markdown.
       - name: Biome format and lint check
         run: bunx --bun biome ci .
 

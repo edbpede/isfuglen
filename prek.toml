@@ -27,7 +27,7 @@ exclude = { glob = [
 ] }
 
 # Deliberately no `[priorities]` table. Several hooks here rewrite files
-# (trailing-whitespace, end-of-file-fixer, Biome, Prettier), and prek runs hooks
+# (trailing-whitespace, end-of-file-fixer, Biome), and prek runs hooks
 # that share a priority concurrently — with undefined results when they touch the
 # same paths, and no way to attribute the failure. Omitting `priority` makes prek
 # assign implicit sequential values from file order, which is exactly the order
@@ -211,28 +211,18 @@ hooks = [{ id = "gitleaks", groups = ["ci"] }]
 [[repos]]
 repo = "local"
 
-# Biome formats and lints TS/JS/JSON/CSS. It deliberately does NOT own .astro or
-# .svelte here: Biome 2.5 lints the <script>/<style> blocks inside them but its
-# template-markup parsing is still maturing, so Prettier keeps those files.
+# Biome is the only formatter and linter here. In .astro and .svelte it lints
+# the frontmatter and the <script>/<style> blocks and sorts their imports, but
+# it does not format them: Biome 2.5 does not parse the template markup, and its
+# formatter strips the indentation off the whole <script> block. See the
+# override in biome.json. Markdown is not covered at all — Biome 2.5 has no
+# markdown support.
 [[repos.hooks]]
 id = "biome"
 name = "Format and lint with Biome"
 entry = "bunx --bun biome check --write --no-errors-on-unmatched"
 language = "system"
-types_or = ["ts", "tsx", "javascript", "jsx", "json", "css"]
-groups = ["ci"]
-
-# Prettier owns Astro and Svelte template markup, plus Markdown docs.
-#
-# The `docs/PLAN.md` exclusion is gone with the file it named: the plan was
-# removed in `chore: remove docs/PLAN.md`, and `check-useless-excludes` fails on
-# a pattern that matches nothing. `.prettierignore` drops the same entry.
-[[repos.hooks]]
-id = "prettier"
-name = "Format Astro, Svelte and Markdown with Prettier"
-entry = "bunx --bun prettier --write --ignore-unknown"
-language = "system"
-types_or = ["astro", "svelte", "markdown"]
+types_or = ["ts", "tsx", "javascript", "jsx", "json", "css", "astro", "svelte"]
 groups = ["ci"]
 
 # `astro check` is the only thing that type-checks .astro files; plain tsc ignores
