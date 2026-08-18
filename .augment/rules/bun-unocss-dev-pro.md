@@ -641,7 +641,7 @@ bunx --bun astro check
 
 ## Linting and formatting
 
-**Biome (2.5.x)** is the current recommended single-binary linter+formatter — one `biome.json`, Rust-fast, replacing ESLint + Prettier for JS/TS/CSS. As of 2.5, Biome lints inside `.astro` and `.svelte` files (JS/TS in `<script>` and CSS in `<style>`), with framework-file rule coverage still expanding.
+**Biome (2.5.x)** is the only linter and formatter in this project — one `biome.json`, Rust-fast, covering JS/TS/CSS/JSON. As of 2.5, Biome lints inside `.astro` and `.svelte` files (JS/TS in `<script>` and CSS in `<style>`), with framework-file rule coverage still expanding. Do not add a second linter or formatter alongside it.
 
 ```jsonc
 // biome.json
@@ -657,7 +657,7 @@ bunx --bun astro check
 bunx --bun biome check --write .
 ```
 
-**The honest caveat:** Biome's parsing of Astro/Svelte *template* syntax (the `.astro` markup, Svelte `{#if}` control flow) is still maturing. If you need full-fidelity formatting of template markup, keep **Prettier with `prettier-plugin-astro` + `prettier-plugin-svelte`** for those files and use Biome for `.ts`/`.js`. Do not run both ESLint and Biome on the same files. Oxlint (from the Vite/Rolldown team) is an alternative linter designed to run alongside a formatter, but Biome is the recommended default here.
+**The honest caveat:** Biome 2.5 does not parse Astro/Svelte *template* syntax (the `.astro` markup, Svelte `{#if}` control flow), and it has no Markdown support at all. This project accepts that: template markup and Markdown are not formatted by anything. Biome still lints the frontmatter and the `<script>`/`<style>` blocks in `.astro`/`.svelte` and sorts their imports, but its formatter is disabled for those files in the `biome.json` override — it strips the indentation off the whole `<script>` block. `noUnusedVariables`, `noUnusedImports` and `useConst` are off there for the same reason: Biome cannot see the template markup, so it reports every symbol used only there as unused.
 
 ## Deployment adapters
 
