@@ -15,6 +15,12 @@ jobs:
     uses: engels74/automation/.github/workflows/biome-repair.yml@v1.0.0
     with:
       config-files: biome.json
-      source-roots: src scripts tests astro.config.mjs uno.config.ts playwright.config.ts
+      source-roots: |
+        src
+        scripts
+        tests
+        astro.config.mjs
+        uno.config.ts
+        playwright.config.ts
       # renovate: datasource=npm depName=bun
       bun-version: 1.4.0
