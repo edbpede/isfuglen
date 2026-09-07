@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"]],
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {
@@ -54,7 +54,7 @@ export default defineConfig({
     // `astro preview` manages a background daemon, which leaves "has the server
     // started" ambiguous for a test runner. `scripts/serve-dist.ts` serves the
     // same `dist/` in the foreground and exits with the run.
-    command: "bun run build && bun run scripts/serve-dist.ts",
+    command: "bun run scripts/serve-dist.ts",
     url: "http://localhost:4321",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

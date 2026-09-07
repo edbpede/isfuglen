@@ -39,10 +39,10 @@ jobs:
       url: https://isfugl.edbpede.net
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
         with:
           # Derived from the committed `packageManager` field, not `latest`:
           # a deploy must build with the same toolchain the gates validated.
@@ -57,7 +57,7 @@ jobs:
         run: bun run build
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
