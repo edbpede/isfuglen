@@ -22,7 +22,7 @@ hook — use `bun`, `bunx --bun`.
 | Unit tests | `bun test` — scoped to `tests/unit` by `bunfig.toml` |
 | One unit file | `bun test tests/unit/parser/dates.test.ts` |
 | One unit case | `bun test tests/unit/parser/dates.test.ts -t "partial name"` |
-| E2E | `bun run test:e2e` — Playwright builds and serves `dist/` itself |
+| E2E | `bun run test:e2e` — build first; Playwright serves the validated `dist/` |
 | One E2E file | `bunx --bun playwright test tests/e2e/core-flow.spec.ts -g "partial name"` |
 | Bundle budget | `bun run check:bundle` |
 
@@ -84,7 +84,7 @@ on the parse/render path validates. A schema change needs a step in
 **Routes are translated, not prefixed.** `src/lib/i18n/routes.ts` is the only
 place that knows the mapping (`/hjaelp` ↔ `/en/help`). A new page means a file
 in `src/pages/` *and* `src/pages/en/`, plus an entry there;
-`.github/workflows/smoke.yml` probes all eight published paths.
+`.github/scripts/smoke.sh` probes all eight published paths.
 
 **Brand SVG drop-in contract:** `<path>` elements only, no `transform`, no
 elliptical arcs. `src/lib/export/svg-path.ts` refuses anything else by name.
@@ -129,7 +129,7 @@ support. Format template markup by hand.
 
 ## Reference
 
-- `.agents/rules/bun-unocss-dev-pro.md` — binding Bun / Astro 7 / Svelte 5 runes
+- `.agents/rules/astro-svelte5-islands.md` — binding Bun / Astro 7 / Svelte 5 runes
   / UnoCSS conventions and anti-patterns. Read before writing a new island,
   Astro page or UnoCSS config change.
 - `docs/pdf-export-options.md` — why the PDF export paints over the paginated
