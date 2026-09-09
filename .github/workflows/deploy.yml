@@ -1,4 +1,4 @@
-# Publish the built static site to GitHub Pages at https://isfugl.edbpede.net.
+# Publish the built static site to GitHub Pages at https://isfugl.edb.fi.
 #
 # The app is `output: "static"` with no adapter, no SSR and no API route, so the
 # deployable artefact is exactly `dist/`. peaceiris/actions-gh-pages force-pushes
@@ -36,7 +36,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
     environment:
       name: github-pages
-      url: https://isfugl.edbpede.net
+      url: https://isfugl.edb.fi
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
@@ -64,4 +64,4 @@ jobs:
           # Astro emits `_astro/`, and Jekyll drops underscore-prefixed paths.
           # The action writes `.nojekyll` for us as long as Jekyll stays off.
           enable_jekyll: false
-          cname: isfugl.edbpede.net
+          cname: isfugl.edb.fi

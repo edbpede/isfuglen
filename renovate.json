@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>engels74/automation:default#v1.0.0"],
+  "extends": ["github>edbfi/automation:default#v1.0.0"],
   "packageRules": [
     {
       "description": "Astro and Svelte language tools require the JavaScript TypeScript API; review the cap when TS 7 becomes compatible.",

@@ -4,7 +4,7 @@ Every PR, default-branch push and manual `ci.yml` dispatch runs the same checks.
 The required `ci / required` aggregate rejects failed, cancelled, missing and
 skipped prerequisites. Workflow validation is read-only and rejects tracked-file
 mutations. Shared guards, gate and Biome repair use versioned releases of
-`engels74/automation`; all external action references use full version tags.
+`edbfi/automation`; all external action references use full version tags.
 
 The quality lane runs complementary prek hygiene and stack guards, read-only
 Biome, actual type checks, applicable unit tests, a static build and applicable

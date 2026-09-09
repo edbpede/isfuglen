@@ -11,7 +11,7 @@ export default defineConfig({
   // The deployed origin (GitHub Pages, custom domain — see
   // .github/workflows/deploy.yml). Astro only uses it to build absolute URLs;
   // the site itself is served from the domain root, so no `base` is needed.
-  site: "https://isfugl.edbpede.net",
+  site: "https://isfugl.edb.fi",
   /**
    * The privacy guarantee, enforced rather than asserted (docs/PLAN.md §16.4).
    *

@@ -129,7 +129,7 @@ support. Format template markup by hand.
 
 ## Reference
 
-- `.agents/rules/bun-unocss-dev-pro.md` — binding Bun / Astro 7 / Svelte 5 runes
+- `.agents/rules/astro-svelte5-islands.md` — binding Bun / Astro 7 / Svelte 5 runes
   / UnoCSS conventions and anti-patterns. Read before writing a new island,
   Astro page or UnoCSS config change.
 - `docs/pdf-export-options.md` — why the PDF export paints over the paginated
